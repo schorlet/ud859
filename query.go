@@ -1,10 +1,67 @@
 package ud859
 
 import (
+	"fmt"
+
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/datastore"
 )
+
+// Filter adds a filter to the query.
+func (q *ConferenceQueryForm) Filter(field string, op string, value interface{}) *ConferenceQueryForm {
+	q.Filters = append(q.Filters, &Filter{field, op, value})
+	return q
+}
+
+// CheckFilters verifies that the inequality filter applys only on the same field.
+func (q *ConferenceQueryForm) CheckFilters() error {
+	var found bool
+
+	for _, filter := range q.Filters {
+		if filter.Op != EQ {
+			if found && filter.Field != q.inequalityFilter.Field {
+				return errBadRequest(nil, "only one inequality filter is allowed")
+			}
+
+			found = true
+			q.inequalityFilter = filter
+		}
+	}
+	return nil
+}
+
+func (q ConferenceQueryForm) String() string {
+	s := "query: "
+	for _, filter := range q.Filters {
+		s += fmt.Sprintf("[%s %s %v]", filter.Field, filter.Op, filter.Value)
+	}
+	return s
+}
+
+// Query returns the query to apply to the datastore.
+func (q ConferenceQueryForm) Query() (*datastore.Query, error) {
+	// log.Printf("%s", q)
+	err := q.CheckFilters()
+	if err != nil {
+		return nil, err
+	}
+
+	query := datastore.NewQuery("Conference")
+
+	if q.inequalityFilter != nil {
+		// order first by the inequality filter
+		query = query.Order(string(q.inequalityFilter.Field))
+	}
+	query = query.Order("Name")
+
+	for _, filter := range q.Filters {
+		query = query.Filter(
+			fmt.Sprintf("%s %s", filter.Field, filter.Op), filter.Value)
+	}
+
+	return query, nil
+}
 
 // QueryConferences searches for Conferences with the specified filters.
 func (ConferenceAPI) QueryConferences(c context.Context, form *ConferenceQueryForm) (*Conferences, error) {
