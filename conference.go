@@ -68,24 +68,3 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 
 	return &ConferenceKeyForm{conference.WebsafeKey}, nil
 }
-
-// QueryConferences searches for Conferences with the specified filters.
-func (ConferenceAPI) QueryConferences(c context.Context, form *ConferenceQueryForm) (*Conferences, error) {
-	query, err := form.Query()
-	if err != nil {
-		return nil, err
-	}
-
-	conferences := make([]*Conference, 0)
-	keys, err := query.GetAll(c, &conferences)
-	if err != nil {
-		return nil, err
-	}
-
-	for i := 0; i < len(conferences); i++ {
-		conferences[i].ID = keys[i].IntID()
-		conferences[i].WebsafeKey = keys[i].Encode()
-	}
-
-	return &Conferences{Items: conferences}, nil
-}
