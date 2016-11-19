@@ -3,16 +3,19 @@ package ud859
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/GoogleCloudPlatform/go-endpoints/endpoints"
+
 	"google.golang.org/appengine/datastore"
 )
 
+// TimeFormat to use with ConferenceForm
 const TimeFormat = "2006-01-02"
 
+// Supported query operators
 const (
 	EQ  string = "="
 	LT         = "<"
@@ -21,6 +24,7 @@ const (
 	GTE        = ">="
 )
 
+// Query fields
 const (
 	Name         string = "Name"
 	City                = "City"
@@ -31,24 +35,37 @@ const (
 	MaxAttendees        = "MaxAttendees"
 )
 
+// TeeShirt sizes
 const (
-	SIZE_NO int8 = iota
-	SIZE_XS
-	SIZE_S
-	SIZE_M
-	SIZE_L
-	SIZE_XL
-	SIZE_XXL
-	SIZE_XXXL
+	SizeNO   string = ""
+	SizeXS          = "XS"
+	SizeS           = "S"
+	SizeM           = "M"
+	SizeL           = "L"
+	SizeXL          = "XL"
+	SizeXXL         = "XXL"
+	SizeXXXL        = "XXXL"
+)
+
+// Common errors
+var (
+	ErrUnauthorized     = endpoints.NewUnauthorizedError("ud859: authorization required")
+	ErrRegistered       = endpoints.NewConflictError("ud859: already registered")
+	ErrNotRegistered    = endpoints.NewConflictError("ud859: not registered")
+	ErrNoSeatsAvailable = endpoints.NewConflictError("ud859: no seats available")
 )
 
 type (
+	// ConferenceAPI is the conference API.
+	ConferenceAPI struct{}
+
+	// Conference gives details about a conference.
 	Conference struct {
 		ID             int64     `json:"-" datastore:"-"`
 		WebsafeKey     string    `json:"websafeKey" datastore:"-"`
 		Name           string    `json:"name"`
 		Description    string    `json:"description"`
-		Organizer      string    `json:"organizer"`
+		Organizer      string    `json:"organizerDisplayName"`
 		Topics         []string  `json:"topics"`
 		City           string    `json:"city"`
 		StartDate      time.Time `json:"startDate"`
@@ -56,16 +73,15 @@ type (
 		MaxAttendees   int       `json:"maxAttendees"`
 		SeatsAvailable int       `json:"seatsAvailable"`
 	}
-	// "month": 9,
-	// "organizerDisplayName": "DawoonC",
-	// "kind": "conference#resourcesItem"
 
+	// Conferences is a list of Conferences.
 	Conferences struct {
 		Items []*Conference `json:"items"`
 	}
 
+	// ConferenceForm gives details about a conference to create.
 	ConferenceForm struct {
-		Name         string `json:"name"`
+		Name         string `json:"name" endpoints:"req"`
 		Description  string `json:"description"`
 		Topics       string `json:"topics"`
 		City         string `json:"city"`
@@ -74,52 +90,63 @@ type (
 		MaxAttendees string `json:"maxAttendees"`
 	}
 
-	ConferenceQueryForm struct {
-		Filters          []*filter `json:"filters"`
-		inequalityFilter *filter
+	// ConferenceKeyForm is a conference public key.
+	ConferenceKeyForm struct {
+		WebsafeKey string `json:"websafeConferenceKey" endpoints:"req"`
 	}
 
+	// ConferenceQueryForm collects filters for searching for Conferences.
+	ConferenceQueryForm struct {
+		Filters          []*Filter `json:"filters"`
+		inequalityFilter *Filter
+	}
+
+	// Profile gives details about an identified user.
 	Profile struct {
 		Email        string  `json:"-"`
 		DisplayName  string  `json:"displayName"`
-		TeeShirtSize int8    `json:"teeShirtSize"`
+		TeeShirtSize string  `json:"teeShirtSize"`
 		Conferences  []int64 `json:"-"`
 	}
 
+	// ProfileForm gives details about a profile to create or update.
 	ProfileForm struct {
 		DisplayName  string `json:"displayName"`
-		TeeShirtSize int8   `json:"teeShirtSize"`
+		TeeShirtSize string `json:"teeShirtSize"`
 	}
 
+	// Announcement is an announcement :)
 	Announcement struct {
 		Message string `json:"message"`
 	}
 
-	filter struct {
-		Field string      `json:"field"`
-		Op    string      `json:"op"`
-		Value interface{} `json:"value"`
-	}
-
-	statusError struct {
-		Cause   error
-		Message string
-		Status  int
+	// Filter describes a query restriction.
+	Filter struct {
+		Field string      `endpoints:"req"`
+		Op    string      `endpoints:"req"`
+		Value interface{} `endpoints:"req"`
 	}
 )
 
-func (f *filter) UnmarshalJSON(data []byte) error {
+// MarshalJSON returns *f as the JSON encoding of f.
+func (f *Filter) MarshalJSON() (b []byte, err error) {
+	m := make(map[string]interface{})
+	m["field"] = f.Field
+	m["operator"] = f.Op
+	m["value"] = f.Value
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON sets *f to a copy of data.
+func (f *Filter) UnmarshalJSON(data []byte) error {
 	m := make(map[string]interface{})
 	err := json.Unmarshal(data, &m)
 	if err != nil {
 		return errBadRequest(err, "unable to parse filter")
 	}
-	if len(m) != 3 {
-		return errBadRequest(nil, "unable to parse filter")
-	}
 
 	f.Field = m["field"].(string)
-	f.Op = m["op"].(string)
+	f.Op = m["operator"].(string)
 	f.Value = m["value"]
 
 	if f.Field == MaxAttendees {
@@ -143,57 +170,28 @@ func (f *filter) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-var (
-	ErrUnauthorized     = newErrorCode("authorization required", http.StatusUnauthorized)
-	ErrRegistered       = newError("already registered")
-	ErrNotRegistered    = newError("not registered")
-	ErrNoSeatsAvailable = newError("no seats available")
-)
-
-func newError(message string) *statusError {
-	return newErrorCode(message, http.StatusForbidden)
+func errBadRequest(cause error, message string) error {
+	return endpoints.NewBadRequestError("ud859: %s (%v)", message, cause)
 }
 
-func newErrorCode(message string, code int) *statusError {
-	return &statusError{
-		Message: message,
-		Status:  code,
-	}
+func errNotFound(cause error, message string) error {
+	return endpoints.NewNotFoundError("ud859: %s (%v)", message, cause)
 }
 
-func errBadRequest(cause error, message string) *statusError {
-	return &statusError{
-		Cause:   cause,
-		Message: message,
-		Status:  http.StatusBadRequest,
-	}
-}
-
-func errNotFound(cause error, message string) *statusError {
-	return &statusError{
-		Cause:   cause,
-		Message: message,
-		Status:  http.StatusNotFound,
-	}
-}
-
-func (e statusError) Error() string {
-	return fmt.Sprintf("ud859: %s (%v)", e.Message, e.Cause)
-}
-
+// Filter adds a filter to the query.
 func (q *ConferenceQueryForm) Filter(field string, op string, value interface{}) *ConferenceQueryForm {
-	q.Filters = append(q.Filters, &filter{field, op, value})
+	q.Filters = append(q.Filters, &Filter{field, op, value})
 	return q
 }
 
+// CheckFilters verifies that the inequality filter applys only on the same field.
 func (q *ConferenceQueryForm) CheckFilters() error {
 	var found bool
 
-	// verify that the inequality filter applys only on the same field
 	for _, filter := range q.Filters {
 		if filter.Op != EQ {
 			if found && filter.Field != q.inequalityFilter.Field {
-				return newError("only one inequality filter is allowed")
+				return errBadRequest(nil, "only one inequality filter is allowed")
 			}
 
 			found = true
@@ -211,6 +209,7 @@ func (q ConferenceQueryForm) String() string {
 	return s
 }
 
+// Query returns the query to apply to the datastore.
 func (q ConferenceQueryForm) Query() (*datastore.Query, error) {
 	// log.Printf("%s", q)
 	err := q.CheckFilters()
@@ -234,41 +233,51 @@ func (q ConferenceQueryForm) Query() (*datastore.Query, error) {
 	return query, nil
 }
 
+// FromConferenceForm returns a new Conference from the specified ConferenceForm.
 func FromConferenceForm(form *ConferenceForm) (*Conference, error) {
 	conference := new(Conference)
 
 	conference.Name = form.Name
 	conference.Description = form.Description
-	conference.Topics = strings.Split(form.Topics, ",")
+
+	if form.Topics != "" {
+		conference.Topics = strings.Split(form.Topics, ",")
+	}
 	conference.City = form.City
 
-	startDate, err := time.Parse(TimeFormat, form.StartDate)
-	if err != nil {
-		return nil, errBadRequest(err, "unable to parse start date")
+	if form.StartDate != "" {
+		startDate, err := time.Parse(TimeFormat, form.StartDate)
+		if err != nil {
+			return nil, errBadRequest(err, "unable to parse start date")
+		}
+		conference.StartDate = startDate
 	}
-	conference.StartDate = startDate
 
-	endDate, err := time.Parse(TimeFormat, form.EndDate)
-	if err != nil {
-		return nil, errBadRequest(err, "unable to parse end date")
+	if form.EndDate != "" {
+		endDate, err := time.Parse(TimeFormat, form.EndDate)
+		if err != nil {
+			return nil, errBadRequest(err, "unable to parse end date")
+		}
+		conference.EndDate = endDate
 	}
-	conference.EndDate = endDate
 
-	max, err := strconv.Atoi(form.MaxAttendees)
-	if err != nil {
-		return nil, errBadRequest(err, "unable to parse max attendees")
+	if form.MaxAttendees != "" {
+		max, err := strconv.Atoi(form.MaxAttendees)
+		if err != nil {
+			return nil, errBadRequest(err, "unable to parse max attendees")
+		}
+		conference.MaxAttendees = max
+		conference.SeatsAvailable = max
 	}
-	conference.MaxAttendees = max
-	conference.SeatsAvailable = max
 
 	return conference, nil
 }
 
-func (p *Profile) Goto(conferenceID int64) {
+func (p *Profile) register(conferenceID int64) {
 	p.Conferences = append(p.Conferences, conferenceID)
 }
 
-func (p *Profile) Cancel(conferenceID int64) {
+func (p *Profile) unRegister(conferenceID int64) {
 	for i, id := range p.Conferences {
 		if id == conferenceID {
 			p.Conferences = append(p.Conferences[:i], p.Conferences[i+1:]...)
@@ -277,7 +286,8 @@ func (p *Profile) Cancel(conferenceID int64) {
 	}
 }
 
-func (p Profile) Registered(conferenceID int64) bool {
+// HasRegistered returns true if the user has registered to the specified conference ID.
+func (p Profile) HasRegistered(conferenceID int64) bool {
 	for _, id := range p.Conferences {
 		if id == conferenceID {
 			return true

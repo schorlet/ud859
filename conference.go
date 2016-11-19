@@ -7,16 +7,14 @@ import (
 	"google.golang.org/appengine/user"
 )
 
+// conferenceKey returns the datastore key associated with the specified conference ID.
 func conferenceKey(c context.Context, conferenceID int64) *datastore.Key {
 	return datastore.NewKey(c, "Conference", "", conferenceID, profileKey(c))
 }
 
-func conferenceSafeKey(c context.Context, websafeKey string) (*datastore.Key, error) {
-	return datastore.DecodeKey(websafeKey)
-}
-
-func GetConference(c context.Context, websafeKey string) (*Conference, error) {
-	key, err := conferenceSafeKey(c, websafeKey)
+// GetConference returns the Conference with the specified key.
+func (ConferenceAPI) GetConference(c context.Context, form *ConferenceKeyForm) (*Conference, error) {
+	key, err := datastore.DecodeKey(form.WebsafeKey)
 	if err != nil {
 		return nil, errBadRequest(err, "invalid conference key")
 	}
@@ -36,7 +34,8 @@ func GetConference(c context.Context, websafeKey string) (*Conference, error) {
 	return conference, nil
 }
 
-func CreateConference(c context.Context, form *ConferenceForm) (*Conference, error) {
+// CreateConference creates a Conference with the specified form.
+func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (*ConferenceKeyForm, error) {
 	if u := user.Current(c); u == nil {
 		return nil, ErrUnauthorized
 	}
@@ -63,14 +62,15 @@ func CreateConference(c context.Context, form *ConferenceForm) (*Conference, err
 		return nil
 	}, nil)
 
-	return conference, err
+	if err != nil {
+		return nil, err
+	}
+
+	return &ConferenceKeyForm{conference.WebsafeKey}, nil
 }
 
-func QueryConferences(c context.Context) ([]*Conference, error) {
-	return QueryConferencesFilter(c, new(ConferenceQueryForm))
-}
-
-func QueryConferencesFilter(c context.Context, form *ConferenceQueryForm) ([]*Conference, error) {
+// QueryConferences searches for Conferences with the specified filters.
+func (ConferenceAPI) QueryConferences(c context.Context, form *ConferenceQueryForm) (*Conferences, error) {
 	query, err := form.Query()
 	if err != nil {
 		return nil, err
@@ -87,5 +87,5 @@ func QueryConferencesFilter(c context.Context, form *ConferenceQueryForm) ([]*Co
 		conferences[i].WebsafeKey = keys[i].Encode()
 	}
 
-	return conferences, nil
+	return &Conferences{Items: conferences}, nil
 }
