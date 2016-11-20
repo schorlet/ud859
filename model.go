@@ -7,10 +7,10 @@ import (
 	"github.com/GoogleCloudPlatform/go-endpoints/endpoints"
 )
 
-// TimeFormat to use with ConferenceForm
+// TimeFormat to use with ConferenceForm.
 const TimeFormat = "2006-01-02"
 
-// Supported query operators
+// Supported query operators.
 const (
 	EQ  string = "="
 	LT         = "<"
@@ -19,7 +19,7 @@ const (
 	GTE        = ">="
 )
 
-// Query fields
+// Query fields.
 const (
 	Name           string = "Name"
 	City                  = "City"
@@ -31,7 +31,7 @@ const (
 	SeatsAvailable        = "SeatsAvailable"
 )
 
-// TeeShirt sizes
+// TeeShirt sizes.
 const (
 	SizeNO   string = ""
 	SizeXS          = "XS"
@@ -43,7 +43,7 @@ const (
 	SizeXXXL        = "XXXL"
 )
 
-// Common errors
+// Common errors.
 var (
 	ErrUnauthorized     = endpoints.NewUnauthorizedError("ud859: authorization required")
 	ErrRegistered       = endpoints.NewConflictError("ud859: already registered")
@@ -111,7 +111,7 @@ type (
 		TeeShirtSize string `json:"teeShirtSize"`
 	}
 
-	// Announcement is an announcement :)
+	// Announcement is an announcement.
 	Announcement struct {
 		Message string `json:"message"`
 	}

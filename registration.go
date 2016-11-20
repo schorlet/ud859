@@ -30,10 +30,10 @@ func (p Profile) HasRegistered(conferenceID int64) bool {
 }
 
 // GotoConference performs the registration to the specified conference.
-func (api *ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyForm) error {
-	pkey := profileKey(c)
-	if pkey == nil {
-		return ErrUnauthorized
+func (ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyForm) error {
+	pkey, err := profileKey(c)
+	if err != nil {
+		return err
 	}
 	ckey, err := datastore.DecodeKey(form.WebsafeKey)
 	if err != nil {
@@ -42,13 +42,13 @@ func (api *ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyF
 
 	return datastore.RunInTransaction(c, func(c context.Context) error {
 		// get the profile
-		profile, err := api.GetProfile(c)
+		profile, err := getProfile(c, pkey)
 		if err != nil {
 			return err
 		}
 
 		// get the conference
-		conference, err := api.GetConference(c, form)
+		conference, err := getConference(c, ckey)
 		if err != nil {
 			return errBadRequest(err, "conference does not exist")
 		}
@@ -76,10 +76,10 @@ func (api *ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyF
 }
 
 // CancelConference cancels the registration to the specified conference.
-func (api *ConferenceAPI) CancelConference(c context.Context, form *ConferenceKeyForm) error {
-	pkey := profileKey(c)
-	if pkey == nil {
-		return ErrUnauthorized
+func (ConferenceAPI) CancelConference(c context.Context, form *ConferenceKeyForm) error {
+	pkey, err := profileKey(c)
+	if err != nil {
+		return err
 	}
 	ckey, err := datastore.DecodeKey(form.WebsafeKey)
 	if err != nil {
@@ -88,13 +88,13 @@ func (api *ConferenceAPI) CancelConference(c context.Context, form *ConferenceKe
 
 	return datastore.RunInTransaction(c, func(c context.Context) error {
 		// get the profile
-		profile, err := api.GetProfile(c)
+		profile, err := getProfile(c, pkey)
 		if err != nil {
 			return err
 		}
 
 		// get the conference
-		conference, err := api.GetConference(c, form)
+		conference, err := getConference(c, ckey)
 		if err != nil {
 			return errBadRequest(err, "conference does not exist")
 		}

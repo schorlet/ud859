@@ -7,21 +7,24 @@ import (
 	"google.golang.org/appengine/user"
 )
 
-// profileKey returns a datastore key for the identified user, or nil.
-func profileKey(c context.Context) *datastore.Key {
+// profileKey returns a datastore key for the identified user.
+func profileKey(c context.Context) (*datastore.Key, error) {
 	if u := user.Current(c); u != nil {
-		return datastore.NewKey(c, "Profile", u.String(), 0, nil)
+		return datastore.NewKey(c, "Profile", u.String(), 0, nil), nil
 	}
-	return nil
+	return nil, ErrUnauthorized
 }
 
 // GetProfile returns the profile associated with the current user.
 func (ConferenceAPI) GetProfile(c context.Context) (*Profile, error) {
-	key := profileKey(c)
-	if key == nil {
-		return nil, ErrUnauthorized
+	pkey, err := profileKey(c)
+	if err != nil {
+		return nil, err
 	}
+	return getProfile(c, pkey)
+}
 
+func getProfile(c context.Context, key *datastore.Key) (*Profile, error) {
 	// get the profile
 	profile := new(Profile)
 	err := datastore.Get(c, key, profile)
@@ -35,9 +38,9 @@ func (ConferenceAPI) GetProfile(c context.Context) (*Profile, error) {
 
 // SaveProfile creates or updates the profile associated with the current user.
 func (ConferenceAPI) SaveProfile(c context.Context, form *ProfileForm) error {
-	key := profileKey(c)
-	if key == nil {
-		return ErrUnauthorized
+	pkey, err := profileKey(c)
+	if err != nil {
+		return err
 	}
 
 	// set the form values
@@ -47,6 +50,6 @@ func (ConferenceAPI) SaveProfile(c context.Context, form *ProfileForm) error {
 		TeeShirtSize: form.TeeShirtSize,
 	}
 
-	_, err := datastore.Put(c, key, profile)
+	_, err = datastore.Put(c, pkey, profile)
 	return err
 }

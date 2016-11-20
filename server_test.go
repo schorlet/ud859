@@ -351,10 +351,8 @@ func queryNofilters(c *client, t *testing.T) {
 }
 
 func queryFilters(c *client, t *testing.T) {
-	type r struct {
-		field, operator string
-		value           interface{}
-	}
+	type r ud859.Filter
+
 	tts := []struct {
 		restrictions []r
 		expected     int
@@ -403,13 +401,13 @@ func queryFilters(c *client, t *testing.T) {
 	for _, tt_donotuse := range tts {
 		tt := tt_donotuse
 
-		t.Run(tt.restrictions[0].field, func(t *testing.T) {
+		t.Run(tt.restrictions[0].Field, func(t *testing.T) {
 			t.Parallel()
 
 			// build the query
 			query := new(ud859.ConferenceQueryForm)
 			for _, r := range tt.restrictions {
-				query.Filter(r.field, r.operator, r.value)
+				query.Filter(r.Field, r.Op, r.Value)
 			}
 
 			w, err := c.do("/ConferenceAPI.QueryConferences", query)

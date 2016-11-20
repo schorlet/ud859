@@ -31,14 +31,6 @@ func (q *ConferenceQueryForm) CheckFilters() error {
 	return nil
 }
 
-func (q ConferenceQueryForm) String() string {
-	s := "query: "
-	for _, filter := range q.Filters {
-		s += fmt.Sprintf("[%s %s %v]", filter.Field, filter.Op, filter.Value)
-	}
-	return s
-}
-
 // Query returns the query to apply to the datastore.
 func (q ConferenceQueryForm) Query() (*datastore.Query, error) {
 	err := q.CheckFilters()
@@ -85,14 +77,14 @@ func (ConferenceAPI) QueryConferences(c context.Context, form *ConferenceQueryFo
 
 // ConferencesCreated returns the Conferences created by the current user.
 func (ConferenceAPI) ConferencesCreated(c context.Context) (*Conferences, error) {
-	key := profileKey(c)
-	if key == nil {
-		return nil, ErrUnauthorized
+	pkey, err := profileKey(c)
+	if err != nil {
+		return nil, err
 	}
 
 	// get the conferences whose parent is the profile key
 	conferences := make([]*Conference, 0)
-	query := datastore.NewQuery("Conference").Ancestor(key).Order("Name")
+	query := datastore.NewQuery("Conference").Ancestor(pkey).Order("Name")
 
 	keys, err := query.GetAll(c, &conferences)
 	if err != nil {
@@ -108,9 +100,14 @@ func (ConferenceAPI) ConferencesCreated(c context.Context) (*Conferences, error)
 }
 
 // ConferencesToAttend returns the Conferences to addend by the current user.
-func (api *ConferenceAPI) ConferencesToAttend(c context.Context) (*Conferences, error) {
+func (ConferenceAPI) ConferencesToAttend(c context.Context) (*Conferences, error) {
+	pkey, err := profileKey(c)
+	if err != nil {
+		return nil, err
+	}
+
 	// get the profile
-	profile, err := api.GetProfile(c)
+	profile, err := getProfile(c, pkey)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +120,7 @@ func (api *ConferenceAPI) ConferencesToAttend(c context.Context) (*Conferences, 
 	// get the conference keys
 	keys := make([]*datastore.Key, len(profile.Conferences))
 	for i, conferenceID := range profile.Conferences {
-		keys[i] = conferenceKey(c, conferenceID)
+		keys[i] = conferenceKey(c, conferenceID, pkey)
 	}
 
 	// get the conferences

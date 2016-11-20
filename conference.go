@@ -8,12 +8,11 @@ import (
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/datastore"
-	"google.golang.org/appengine/user"
 )
 
 // conferenceKey returns the datastore key associated with the specified conference ID.
-func conferenceKey(c context.Context, conferenceID int64) *datastore.Key {
-	return datastore.NewKey(c, "Conference", "", conferenceID, profileKey(c))
+func conferenceKey(c context.Context, conferenceID int64, pkey *datastore.Key) *datastore.Key {
+	return datastore.NewKey(c, "Conference", "", conferenceID, pkey)
 }
 
 // GetConference returns the Conference with the specified key.
@@ -22,10 +21,13 @@ func (ConferenceAPI) GetConference(c context.Context, form *ConferenceKeyForm) (
 	if err != nil {
 		return nil, errBadRequest(err, "invalid conference key")
 	}
+	return getConference(c, key)
+}
 
+func getConference(c context.Context, key *datastore.Key) (*Conference, error) {
 	// get the conference
 	conference := new(Conference)
-	err = datastore.Get(c, key, conference)
+	err := datastore.Get(c, key, conference)
 	if err != nil {
 		return nil, errNotFound(err, "conference not found")
 	}
@@ -38,9 +40,13 @@ func (ConferenceAPI) GetConference(c context.Context, form *ConferenceKeyForm) (
 
 // CreateConference creates a Conference with the specified form.
 func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (*ConferenceKeyForm, error) {
-	if u := user.Current(c); u == nil {
-		return nil, ErrUnauthorized
+	pkey, err := profileKey(c)
+	if err != nil {
+		return nil, err
 	}
+
+	// incomplete conference key
+	ckey := conferenceKey(c, 0, pkey)
 
 	// create a new conference
 	conference, err := FromConferenceForm(form)
@@ -48,12 +54,9 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 		return nil, err
 	}
 
-	// incomplete conference key
-	key := conferenceKey(c, 0)
-
 	err = datastore.RunInTransaction(c, func(c context.Context) error {
 		// save the conference
-		key, err := datastore.Put(c, key, conference)
+		key, err := datastore.Put(c, ckey, conference)
 		if err != nil {
 			return err
 		}
