@@ -31,69 +31,89 @@ func (p Profile) HasRegistered(conferenceID int64) bool {
 
 // GotoConference performs the registration to the specified conference.
 func (api *ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyForm) error {
-	// get the profile
-	profile, err := api.GetProfile(c)
+	pkey := profileKey(c)
+	if pkey == nil {
+		return ErrUnauthorized
+	}
+	ckey, err := datastore.DecodeKey(form.WebsafeKey)
 	if err != nil {
-		return err
-	}
-
-	// get the conference
-	conference, err := api.GetConference(c, form)
-	if err != nil {
-		return errBadRequest(err, "conference does not exist")
-	}
-
-	if profile.HasRegistered(conference.ID) {
-		return ErrRegistered
-	}
-	if conference.SeatsAvailable <= 0 {
-		return ErrNoSeatsAvailable
+		return errBadRequest(err, "invalid conference key")
 	}
 
 	return datastore.RunInTransaction(c, func(c context.Context) error {
+		// get the profile
+		profile, err := api.GetProfile(c)
+		if err != nil {
+			return err
+		}
+
+		// get the conference
+		conference, err := api.GetConference(c, form)
+		if err != nil {
+			return errBadRequest(err, "conference does not exist")
+		}
+
+		if profile.HasRegistered(conference.ID) {
+			return ErrRegistered
+		}
+		if conference.SeatsAvailable <= 0 {
+			return ErrNoSeatsAvailable
+		}
+
 		// register to the conference
 		profile.register(conference.ID)
-		_, err = datastore.Put(c, profileKey(c), profile)
+		_, err = datastore.Put(c, pkey, profile)
 		if err != nil {
 			return err
 		}
 
 		// decrease the available seats
 		conference.SeatsAvailable--
-		_, err = datastore.Put(c, conferenceKey(c, conference.ID), conference)
+		_, err = datastore.Put(c, ckey, conference)
 		return err
-	}, nil)
+
+	}, &datastore.TransactionOptions{XG: true})
 }
 
 // CancelConference cancels the registration to the specified conference.
 func (api *ConferenceAPI) CancelConference(c context.Context, form *ConferenceKeyForm) error {
-	// get the profile
-	profile, err := api.GetProfile(c)
-	if err != nil {
-		return err
+	pkey := profileKey(c)
+	if pkey == nil {
+		return ErrUnauthorized
 	}
-
-	// get the conference
-	conference, err := api.GetConference(c, form)
+	ckey, err := datastore.DecodeKey(form.WebsafeKey)
 	if err != nil {
-		return errBadRequest(err, "conference does not exist")
-	}
-
-	if !profile.HasRegistered(conference.ID) {
-		return ErrNotRegistered
+		return errBadRequest(err, "invalid conference key")
 	}
 
 	return datastore.RunInTransaction(c, func(c context.Context) error {
+		// get the profile
+		profile, err := api.GetProfile(c)
+		if err != nil {
+			return err
+		}
+
+		// get the conference
+		conference, err := api.GetConference(c, form)
+		if err != nil {
+			return errBadRequest(err, "conference does not exist")
+		}
+
+		if !profile.HasRegistered(conference.ID) {
+			return ErrNotRegistered
+		}
+
 		// unregister from the conference
 		profile.unRegister(conference.ID)
-		_, err := datastore.Put(c, profileKey(c), profile)
+		_, err = datastore.Put(c, pkey, profile)
 		if err != nil {
 			return err
 		}
 
 		// increase the available seats
 		conference.SeatsAvailable++
-		_, err = datastore.Put(c, conferenceKey(c, conference.ID), conference)
+		_, err = datastore.Put(c, ckey, conference)
 		return err
-	}, nil)
+
+	}, &datastore.TransactionOptions{XG: true})
 }

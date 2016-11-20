@@ -41,7 +41,6 @@ func (q ConferenceQueryForm) String() string {
 
 // Query returns the query to apply to the datastore.
 func (q ConferenceQueryForm) Query() (*datastore.Query, error) {
-	// log.Printf("%s", q)
 	err := q.CheckFilters()
 	if err != nil {
 		return nil, err
@@ -91,7 +90,7 @@ func (ConferenceAPI) ConferencesCreated(c context.Context) (*Conferences, error)
 		return nil, ErrUnauthorized
 	}
 
-	// get the conferences whose parent is the profile
+	// get the conferences whose parent is the profile key
 	conferences := make([]*Conference, 0)
 	query := datastore.NewQuery("Conference").Ancestor(key).Order("Name")
 
@@ -102,7 +101,7 @@ func (ConferenceAPI) ConferencesCreated(c context.Context) (*Conferences, error)
 
 	for i := 0; i < len(conferences); i++ {
 		conferences[i].ID = keys[i].IntID()
-		conferences[i].WebsafeKey = key.Encode()
+		conferences[i].WebsafeKey = keys[i].Encode()
 	}
 
 	return &Conferences{Items: conferences}, nil

@@ -26,10 +26,8 @@ func (ConferenceAPI) GetConference(c context.Context, form *ConferenceKeyForm) (
 	// get the conference
 	conference := new(Conference)
 	err = datastore.Get(c, key, conference)
-	if err == datastore.ErrNoSuchEntity {
+	if err != nil {
 		return nil, errNotFound(err, "conference not found")
-	} else if err != nil {
-		return nil, err
 	}
 
 	conference.ID = key.IntID()

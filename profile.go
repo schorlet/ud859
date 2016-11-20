@@ -25,14 +25,12 @@ func (ConferenceAPI) GetProfile(c context.Context) (*Profile, error) {
 	// get the profile
 	profile := new(Profile)
 	err := datastore.Get(c, key, profile)
-
-	if err == datastore.ErrNoSuchEntity {
-		profile.Email = user.Current(c).Email
-		err = nil
-	} else if err != nil {
-		profile = nil
+	if err != nil && err != datastore.ErrNoSuchEntity {
+		return nil, err
 	}
-	return profile, err
+
+	profile.Email = user.Current(c).Email
+	return profile, nil
 }
 
 // SaveProfile creates or updates the profile associated with the current user.

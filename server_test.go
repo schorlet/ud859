@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/schorlet/ud859"
@@ -172,7 +173,7 @@ func verifyProfile(c *client, t *testing.T, form *ud859.ProfileForm) {
 		t.Errorf("want:%s, got:%s", form.DisplayName, profile.DisplayName)
 	}
 	if profile.TeeShirtSize != form.TeeShirtSize {
-		t.Errorf("want:%d, got:%d", form.TeeShirtSize, profile.TeeShirtSize)
+		t.Errorf("want:%s, got:%s", form.TeeShirtSize, profile.TeeShirtSize)
 	}
 }
 
@@ -189,7 +190,7 @@ func getConference(c *client, t *testing.T) {
 	}
 
 	// get conference with bad key
-	w, err = c.do("/ConferenceAPI.GetConference", &ud859.ConferenceKeyForm{"foo"})
+	w, err = c.do("/ConferenceAPI.GetConference", &ud859.ConferenceKeyForm{WebsafeKey: "foo"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -267,6 +268,11 @@ func createConference(c *client, t *testing.T) {
 	if len(conferences.Items) != 2 {
 		t.Errorf("want:2, got:%d", len(conferences.Items))
 	}
+
+	for i, conference := range conferences.Items {
+		key := &ud859.ConferenceKeyForm{WebsafeKey: conference.WebsafeKey}
+		verifyConference(c, t, key, forms[i])
+	}
 }
 
 func verifyConference(c *client, t *testing.T,
@@ -314,6 +320,9 @@ func verifyConference(c *client, t *testing.T,
 	}
 	if strconv.Itoa(conference.SeatsAvailable) != form.MaxAttendees {
 		t.Errorf("want:%s, got:%d", form.MaxAttendees, conference.SeatsAvailable)
+	}
+	if conference.SeatsAvailable != conference.MaxAttendees {
+		t.Errorf("want:%d, got:%d", conference.MaxAttendees, conference.SeatsAvailable)
 	}
 }
 
@@ -367,6 +376,13 @@ func queryFilters(c *client, t *testing.T) {
 		{[]r{{ud859.MaxAttendees, ud859.LT, 10}}, 1},
 		{[]r{{ud859.MaxAttendees, ud859.LTE, 10}}, 2},
 		//
+		{[]r{{ud859.SeatsAvailable, ud859.GT, 0}}, 2},
+		{[]r{{ud859.SeatsAvailable, ud859.GT, 1}}, 1},
+		{[]r{{ud859.SeatsAvailable, ud859.GTE, 1}}, 2},
+		{[]r{{ud859.SeatsAvailable, ud859.GT, 10}}, 0},
+		{[]r{{ud859.SeatsAvailable, ud859.LT, 10}}, 1},
+		{[]r{{ud859.SeatsAvailable, ud859.LTE, 10}}, 2},
+		//
 		{[]r{{ud859.StartDate, ud859.GTE, "2016-10-01"},
 			{ud859.StartDate, ud859.LTE, "2016-10-31"}}, 1},
 		{[]r{{ud859.StartDate, ud859.GTE, "2016-01-01"}}, 2},
@@ -390,6 +406,7 @@ func queryFilters(c *client, t *testing.T) {
 		t.Run(tt.restrictions[0].field, func(t *testing.T) {
 			t.Parallel()
 
+			// build the query
 			query := new(ud859.ConferenceQueryForm)
 			for _, r := range tt.restrictions {
 				query.Filter(r.field, r.operator, r.value)
@@ -420,10 +437,11 @@ func gotoConferences(c *client, t *testing.T) {
 	t.Run("BadConference", withClient(c, gotoUnknown))
 	t.Run("NotRegistered", withClient(c, gotoUnRegistered))
 	t.Run("Register", withClient(c, gotoRegistration))
+	t.Run("Conflict", withClient(c, gotoConflict))
 }
 
 func gotoUnknown(c *client, t *testing.T) {
-	key := &ud859.ConferenceKeyForm{"foo"}
+	key := &ud859.ConferenceKeyForm{WebsafeKey: "foo"}
 
 	tts := []struct {
 		email  string
@@ -489,7 +507,7 @@ func gotoUnRegistered(c *client, t *testing.T) {
 	}
 
 	for _, tt := range tts {
-		key := &ud859.ConferenceKeyForm{tt.key}
+		key := &ud859.ConferenceKeyForm{WebsafeKey: tt.key}
 
 		// unregister
 		w, err = c.doID(tt.email, "/ConferenceAPI.CancelConference", key)
@@ -523,7 +541,7 @@ func gotoRegistration(c *client, t *testing.T) {
 	}
 
 	for i, conference := range conferences.Items {
-		key := &ud859.ConferenceKeyForm{conference.WebsafeKey}
+		key := &ud859.ConferenceKeyForm{WebsafeKey: conference.WebsafeKey}
 
 		// register
 		w, err = c.doID("ud859@udacity.com", "/ConferenceAPI.GotoConference", key)
@@ -544,23 +562,10 @@ func gotoRegistration(c *client, t *testing.T) {
 		}
 
 		verifyConferencesToAttend(c, t, i+1)
-
-		// user2 try to register
-		w, err = c.doID("user2@udacity.com", "/ConferenceAPI.GotoConference", key)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if conference.SeatsAvailable == 1 {
-			if w.Code != http.StatusConflict {
-				t.Errorf("want:%d, got:%d", http.StatusConflict, w.Code)
-			}
-		} else if w.Code != http.StatusOK {
-			t.Errorf("want:%d, got:%d", http.StatusOK, w.Code)
-		}
 	}
 
 	for i, conference := range conferences.Items {
-		key := &ud859.ConferenceKeyForm{conference.WebsafeKey}
+		key := &ud859.ConferenceKeyForm{WebsafeKey: conference.WebsafeKey}
 
 		// unregister
 		w, err = c.doID("ud859@udacity.com", "/ConferenceAPI.CancelConference", key)
@@ -584,6 +589,78 @@ func gotoRegistration(c *client, t *testing.T) {
 	}
 
 	verifyConferencesToAttend(c, t, 0)
+}
+
+func gotoConflict(c *client, t *testing.T) {
+	query := new(ud859.ConferenceQueryForm).
+		Filter(ud859.SeatsAvailable, ud859.EQ, 1)
+
+	// query conferences
+	w, err := c.do("/ConferenceAPI.QueryConferences", query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w.Code != http.StatusOK {
+		t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+	}
+
+	// decode the conferences
+	conferences := new(ud859.Conferences)
+	err = json.NewDecoder(w.Body).Decode(conferences)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(conferences.Items) == 0 {
+		t.Fatal("want:>0, got:0")
+	}
+
+	for _, conference := range conferences.Items {
+		key := &ud859.ConferenceKeyForm{WebsafeKey: conference.WebsafeKey}
+
+		wg := new(sync.WaitGroup)
+		wg.Add(2)
+		nb := make(chan struct{}, 2)
+
+		for _, user := range []string{"user1", "user2"} {
+			go func(email string) {
+				defer wg.Done()
+
+				// register user
+				w, err := c.doID(email, "/ConferenceAPI.GotoConference", key)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if w.Code == http.StatusConflict {
+					nb <- struct{}{}
+				}
+			}(user)
+		}
+		wg.Wait()
+		close(nb)
+
+		if len(nb) != 1 {
+			t.Fatalf("want:1, got:%d", len(nb))
+		}
+
+		// get conference
+		w, err = c.do("/ConferenceAPI.GetConference", key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if w.Code != http.StatusOK {
+			t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+		}
+
+		// decode the conference
+		conference2 := new(ud859.Conference)
+		err = json.NewDecoder(w.Body).Decode(conference2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if conference2.SeatsAvailable != 0 {
+			t.Errorf("want:0, got:%d", conference2.SeatsAvailable)
+		}
+	}
 }
 
 func verifyConferencesToAttend(c *client, t *testing.T, count int) {

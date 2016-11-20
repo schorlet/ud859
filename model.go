@@ -21,13 +21,14 @@ const (
 
 // Query fields
 const (
-	Name         string = "Name"
-	City                = "City"
-	Topics              = "Topics"
-	StartDate           = "StartDate"
-	EndDate             = "EndDate"
-	Month               = "Month"
-	MaxAttendees        = "MaxAttendees"
+	Name           string = "Name"
+	City                  = "City"
+	Topics                = "Topics"
+	StartDate             = "StartDate"
+	EndDate               = "EndDate"
+	Month                 = "Month"
+	MaxAttendees          = "MaxAttendees"
+	SeatsAvailable        = "SeatsAvailable"
 )
 
 // TeeShirt sizes
@@ -144,7 +145,7 @@ func (f *Filter) UnmarshalJSON(data []byte) error {
 	f.Op = m["operator"].(string)
 	f.Value = m["value"]
 
-	if f.Field == MaxAttendees {
+	if f.Field == MaxAttendees || f.Field == SeatsAvailable {
 		f.Value = int(f.Value.(float64))
 
 	} else if f.Field == StartDate || f.Field == EndDate {
