@@ -101,13 +101,13 @@ func (ConferenceAPI) ConferencesCreated(c context.Context) (*Conferences, error)
 
 // ConferencesToAttend returns the Conferences to addend by the current user.
 func (ConferenceAPI) ConferencesToAttend(c context.Context) (*Conferences, error) {
-	pkey, err := profileKey(c)
+	pid, err := profileID(c)
 	if err != nil {
 		return nil, err
 	}
 
 	// get the profile
-	profile, err := getProfile(c, pkey)
+	profile, err := getProfile(c, pid)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func (ConferenceAPI) ConferencesToAttend(c context.Context) (*Conferences, error
 	// get the conference keys
 	keys := make([]*datastore.Key, len(profile.Conferences))
 	for i, conferenceID := range profile.Conferences {
-		keys[i] = conferenceKey(c, conferenceID, pkey)
+		keys[i] = conferenceKey(c, conferenceID, pid.key)
 	}
 
 	// get the conferences

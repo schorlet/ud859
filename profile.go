@@ -4,52 +4,70 @@ import (
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/datastore"
-	"google.golang.org/appengine/user"
+
+	"github.com/GoogleCloudPlatform/go-endpoints/endpoints"
 )
 
 // profileKey returns a datastore key for the identified user.
 func profileKey(c context.Context) (*datastore.Key, error) {
-	if u := user.Current(c); u != nil {
-		return datastore.NewKey(c, "Profile", u.String(), 0, nil), nil
+	u, err := endpoints.CurrentUser(c, scopes, audiences, clientIds)
+	if err != nil {
+		return nil, ErrUnauthorized
 	}
-	return nil, ErrUnauthorized
+	return datastore.NewKey(c, "Profile", u.String(), 0, nil), nil
+}
+
+type identity struct {
+	key   *datastore.Key
+	email string
+}
+
+func profileID(c context.Context) (*identity, error) {
+	u, err := endpoints.CurrentUser(c, scopes, audiences, clientIds)
+	if err != nil {
+		return nil, ErrUnauthorized
+	}
+	return &identity{
+		key:   datastore.NewKey(c, "Profile", u.String(), 0, nil),
+		email: u.Email,
+	}, nil
 }
 
 // GetProfile returns the profile associated with the current user.
 func (ConferenceAPI) GetProfile(c context.Context) (*Profile, error) {
-	pkey, err := profileKey(c)
+	pid, err := profileID(c)
 	if err != nil {
 		return nil, err
 	}
-	return getProfile(c, pkey)
+	return getProfile(c, pid)
 }
 
-func getProfile(c context.Context, key *datastore.Key) (*Profile, error) {
+func getProfile(c context.Context, pid *identity) (*Profile, error) {
 	// get the profile
 	profile := new(Profile)
-	err := datastore.Get(c, key, profile)
+	err := datastore.Get(c, pid.key, profile)
 	if err != nil && err != datastore.ErrNoSuchEntity {
 		return nil, err
 	}
 
-	profile.Email = user.Current(c).Email
+	profile.Email = pid.email
 	return profile, nil
 }
 
 // SaveProfile creates or updates the profile associated with the current user.
 func (ConferenceAPI) SaveProfile(c context.Context, form *ProfileForm) error {
-	pkey, err := profileKey(c)
+	pid, err := profileID(c)
 	if err != nil {
 		return err
 	}
 
 	// set the form values
 	profile := &Profile{
-		Email:        user.Current(c).Email,
+		Email:        pid.email,
 		DisplayName:  form.DisplayName,
 		TeeShirtSize: form.TeeShirtSize,
 	}
 
-	_, err = datastore.Put(c, pkey, profile)
+	_, err = datastore.Put(c, pid.key, profile)
 	return err
 }

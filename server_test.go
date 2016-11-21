@@ -13,10 +13,13 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/GoogleCloudPlatform/go-endpoints/endpoints"
 	"github.com/schorlet/ud859"
 
-	"github.com/GoogleCloudPlatform/go-endpoints/endpoints"
+	"golang.org/x/net/context"
+
 	"google.golang.org/appengine/aetest"
+	"google.golang.org/appengine/user"
 )
 
 type client struct {
@@ -57,7 +60,7 @@ func (c *client) doID(email, url string, v interface{}) (*httptest.ResponseRecor
 		return nil, err
 	}
 	if email != "" {
-		r.Header.Set("X-AppEngine-User-Email", email)
+		r.Header.Set("Authorization", "BEARER "+email)
 	}
 
 	// response
@@ -68,9 +71,29 @@ func (c *client) doID(email, url string, v interface{}) (*httptest.ResponseRecor
 	return w, nil
 }
 
+// authenticator
+
+type testAuthenticator struct{}
+
+func testAuthenticatorFactory() endpoints.Authenticator {
+	return testAuthenticator{}
+}
+
+func (testAuthenticator) CurrentOAuthClientID(c context.Context, scope string) (string, error) {
+	return "YOUR-CLIENT-ID", nil
+}
+
+func (testAuthenticator) CurrentOAuthUser(c context.Context, scope string) (*user.User, error) {
+	r := endpoints.HTTPRequest(c)
+	pieces := strings.Fields(r.Header.Get("Authorization"))
+	return &user.User{Email: pieces[1]}, nil
+}
+
 // test
 
 func TestAPI(t *testing.T) {
+	endpoints.AuthenticatorFactory = testAuthenticatorFactory
+
 	server := endpoints.NewServer("")
 	if err := ud859.RegisterConferenceAPI(server); err != nil {
 		t.Fatal(err)
@@ -86,12 +109,9 @@ func TestAPI(t *testing.T) {
 
 	t.Run("GetProfile", withClient(c, getProfile))
 	t.Run("SaveProfile", withClient(c, saveProfile))
-
 	t.Run("GetConference", withClient(c, getConference))
 	t.Run("CreateConference", withClient(c, createConference))
-
 	t.Run("QueryConferences", withClient(c, queryConferences))
-
 	t.Run("Registration", withClient(c, gotoConferences))
 }
 

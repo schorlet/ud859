@@ -31,7 +31,7 @@ func (p Profile) HasRegistered(conferenceID int64) bool {
 
 // GotoConference performs the registration to the specified conference.
 func (ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyForm) error {
-	pkey, err := profileKey(c)
+	pid, err := profileID(c)
 	if err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func (ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyForm) 
 
 	return datastore.RunInTransaction(c, func(c context.Context) error {
 		// get the profile
-		profile, err := getProfile(c, pkey)
+		profile, err := getProfile(c, pid)
 		if err != nil {
 			return err
 		}
@@ -62,7 +62,7 @@ func (ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyForm) 
 
 		// register to the conference
 		profile.register(conference.ID)
-		_, err = datastore.Put(c, pkey, profile)
+		_, err = datastore.Put(c, pid.key, profile)
 		if err != nil {
 			return err
 		}
@@ -77,7 +77,7 @@ func (ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyForm) 
 
 // CancelConference cancels the registration to the specified conference.
 func (ConferenceAPI) CancelConference(c context.Context, form *ConferenceKeyForm) error {
-	pkey, err := profileKey(c)
+	pid, err := profileID(c)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (ConferenceAPI) CancelConference(c context.Context, form *ConferenceKeyForm
 
 	return datastore.RunInTransaction(c, func(c context.Context) error {
 		// get the profile
-		profile, err := getProfile(c, pkey)
+		profile, err := getProfile(c, pid)
 		if err != nil {
 			return err
 		}
@@ -105,7 +105,7 @@ func (ConferenceAPI) CancelConference(c context.Context, form *ConferenceKeyForm
 
 		// unregister from the conference
 		profile.unRegister(conference.ID)
-		_, err = datastore.Put(c, pkey, profile)
+		_, err = datastore.Put(c, pid.key, profile)
 		if err != nil {
 			return err
 		}
