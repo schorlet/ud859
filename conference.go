@@ -83,7 +83,7 @@ func FromConferenceForm(form *ConferenceForm) (*Conference, error) {
 	conference.City = form.City
 
 	if form.StartDate != "" {
-		startDate, err := time.Parse(TimeFormat, form.StartDate)
+		startDate, err := time.Parse(time.RFC3339, form.StartDate)
 		if err != nil {
 			return nil, errBadRequest(err, "unable to parse start date")
 		}
@@ -91,7 +91,7 @@ func FromConferenceForm(form *ConferenceForm) (*Conference, error) {
 	}
 
 	if form.EndDate != "" {
-		endDate, err := time.Parse(TimeFormat, form.EndDate)
+		endDate, err := time.Parse(time.RFC3339, form.EndDate)
 		if err != nil {
 			return nil, errBadRequest(err, "unable to parse end date")
 		}

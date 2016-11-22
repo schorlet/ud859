@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/GoogleCloudPlatform/go-endpoints/endpoints"
 	"github.com/schorlet/ud859"
@@ -226,8 +227,8 @@ func createConference(c *client, t *testing.T) {
 			Description:  "The European Go conference",
 			Topics:       []string{"Programming", "Go"},
 			City:         "Paris",
-			StartDate:    "2016-10-10",
-			EndDate:      "2016-10-10",
+			StartDate:    "2016-10-10T23:00:00Z",
+			EndDate:      "2016-10-10T23:00:00Z",
 			MaxAttendees: "1",
 		},
 		{
@@ -235,8 +236,8 @@ func createConference(c *client, t *testing.T) {
 			Description:  "Largest event in the world dedicated to the Go programming language",
 			Topics:       []string{"Programming", "Go", "Mountain"},
 			City:         "Denver, Colorado",
-			StartDate:    "2016-07-11",
-			EndDate:      "2016-07-13",
+			StartDate:    "2016-07-11T23:00:00Z",
+			EndDate:      "2016-07-13T23:00:00Z",
 			MaxAttendees: "10",
 		},
 	}
@@ -325,11 +326,11 @@ func verifyConference(c *client, t *testing.T,
 		t.Errorf("want:%s, got:%s", form.Name, conference.Name)
 	}
 
-	startDate := conference.StartDate.Format(ud859.TimeFormat)
+	startDate := conference.StartDate.Format(time.RFC3339)
 	if startDate != form.StartDate {
 		t.Errorf("want:%s, got:%s", form.StartDate, startDate)
 	}
-	endDate := conference.EndDate.Format(ud859.TimeFormat)
+	endDate := conference.EndDate.Format(time.RFC3339)
 	if endDate != form.EndDate {
 		t.Errorf("want:%s, got:%s", form.EndDate, endDate)
 	}
@@ -403,24 +404,24 @@ func queryFilters(c *client, t *testing.T) {
 		{[]r{{ud859.SeatsAvailable, ud859.LT, 10}}, 1},
 		{[]r{{ud859.SeatsAvailable, ud859.LTE, 10}}, 2},
 		//
-		{[]r{{ud859.StartDate, ud859.GTE, "2016-10-01"},
-			{ud859.StartDate, ud859.LTE, "2016-10-31"}}, 1},
-		{[]r{{ud859.StartDate, ud859.GTE, "2016-01-01"}}, 2},
-		{[]r{{ud859.StartDate, ud859.GTE, "2017-01-01"}}, 0},
+		{[]r{{ud859.StartDate, ud859.GTE, "2016-10-01T23:00:00Z"},
+			{ud859.StartDate, ud859.LTE, "2016-10-31T23:00:00Z"}}, 1},
+		{[]r{{ud859.StartDate, ud859.GTE, "2016-01-01T23:00:00Z"}}, 2},
+		{[]r{{ud859.StartDate, ud859.GTE, "2017-01-01T23:00:00Z"}}, 0},
 		//
 		{[]r{{ud859.City, ud859.EQ, "Paris"},
-			{ud859.StartDate, ud859.GT, "2016-10-01"}}, 1},
+			{ud859.StartDate, ud859.GT, "2016-10-01T23:00:00Z"}}, 1},
 		{[]r{{ud859.City, ud859.EQ, "Paris"},
-			{ud859.StartDate, ud859.GT, "2016-11-01"}}, 0},
-		{[]r{{ud859.City, ud859.EQ, "Paris"},
-			{ud859.Topics, ud859.EQ, "Go"},
-			{ud859.StartDate, ud859.GT, "2016-10-01"}}, 1},
+			{ud859.StartDate, ud859.GT, "2016-11-01T23:00:00Z"}}, 0},
 		{[]r{{ud859.City, ud859.EQ, "Paris"},
 			{ud859.Topics, ud859.EQ, "Go"},
-			{ud859.StartDate, ud859.GT, "2016-11-01"}}, 0},
+			{ud859.StartDate, ud859.GT, "2016-10-01T23:00:00Z"}}, 1},
+		{[]r{{ud859.City, ud859.EQ, "Paris"},
+			{ud859.Topics, ud859.EQ, "Go"},
+			{ud859.StartDate, ud859.GT, "2016-11-01T23:00:00Z"}}, 0},
 		//
 		{[]r{{ud859.Topics, ud859.EQ, "Go"},
-			{ud859.StartDate, ud859.GT, "2016-01-01"}}, 2},
+			{ud859.StartDate, ud859.GT, "2016-01-01T23:00:00Z"}}, 2},
 	}
 
 	for _, tt_donotuse := range tts {

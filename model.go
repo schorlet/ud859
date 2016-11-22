@@ -7,9 +7,6 @@ import (
 	"github.com/GoogleCloudPlatform/go-endpoints/endpoints"
 )
 
-// TimeFormat to use with ConferenceForm.
-const TimeFormat = "2006-01-02"
-
 // Supported query operators.
 const (
 	EQ  string = "="
@@ -154,10 +151,7 @@ func (f *Filter) UnmarshalJSON(data []byte) error {
 		case string:
 			f.Value, err = time.Parse(time.RFC3339, v)
 			if err != nil {
-				f.Value, err = time.Parse(TimeFormat, v)
-				if err != nil {
-					return errBadRequest(err, "unable to parse "+f.Field)
-				}
+				return errBadRequest(err, "unable to parse "+f.Field)
 			}
 		default:
 			return errBadRequest(err, "unable to parse "+f.Field)
