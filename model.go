@@ -77,13 +77,13 @@ type (
 
 	// ConferenceForm gives details about a conference to create.
 	ConferenceForm struct {
-		Name         string `json:"name" endpoints:"req"`
-		Description  string `json:"description"`
-		Topics       string `json:"topics"`
-		City         string `json:"city"`
-		StartDate    string `json:"startDate"`
-		EndDate      string `json:"endDate"`
-		MaxAttendees string `json:"maxAttendees"`
+		Name         string   `json:"name" endpoints:"req"`
+		Description  string   `json:"description"`
+		Topics       []string `json:"topics"`
+		City         string   `json:"city"`
+		StartDate    string   `json:"startDate"`
+		EndDate      string   `json:"endDate"`
+		MaxAttendees string   `json:"maxAttendees"`
 	}
 
 	// ConferenceKeyForm is a conference public key.

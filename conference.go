@@ -2,7 +2,6 @@ package ud859
 
 import (
 	"strconv"
-	"strings"
 	"time"
 
 	"golang.org/x/net/context"
@@ -80,10 +79,7 @@ func FromConferenceForm(form *ConferenceForm) (*Conference, error) {
 
 	conference.Name = form.Name
 	conference.Description = form.Description
-
-	if form.Topics != "" {
-		conference.Topics = strings.Split(form.Topics, ",")
-	}
+	conference.Topics = form.Topics
 	conference.City = form.City
 
 	if form.StartDate != "" {

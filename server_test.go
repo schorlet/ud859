@@ -224,7 +224,7 @@ func createConference(c *client, t *testing.T) {
 		{
 			Name:         "dotGo",
 			Description:  "The European Go conference",
-			Topics:       "Programming,Go",
+			Topics:       []string{"Programming", "Go"},
 			City:         "Paris",
 			StartDate:    "2016-10-10",
 			EndDate:      "2016-10-10",
@@ -233,7 +233,7 @@ func createConference(c *client, t *testing.T) {
 		{
 			Name:         "gophercon",
 			Description:  "Largest event in the world dedicated to the Go programming language",
-			Topics:       "Programming,Go,Mountain",
+			Topics:       []string{"Programming", "Go", "Mountain"},
 			City:         "Denver, Colorado",
 			StartDate:    "2016-07-11",
 			EndDate:      "2016-07-13",
@@ -334,10 +334,12 @@ func verifyConference(c *client, t *testing.T,
 		t.Errorf("want:%s, got:%s", form.EndDate, endDate)
 	}
 
-	topics := strings.Join(conference.Topics, ",")
-	if topics != form.Topics {
-		t.Errorf("want:%s, got:%s", conference.Topics, topics)
+	tf := strings.Join(form.Topics, ",")
+	tc := strings.Join(conference.Topics, ",")
+	if tc != tf {
+		t.Errorf("want:%s, got:%s", tf, tc)
 	}
+
 	if strconv.Itoa(conference.SeatsAvailable) != form.MaxAttendees {
 		t.Errorf("want:%s, got:%d", form.MaxAttendees, conference.SeatsAvailable)
 	}
@@ -416,6 +418,9 @@ func queryFilters(c *client, t *testing.T) {
 		{[]r{{ud859.City, ud859.EQ, "Paris"},
 			{ud859.Topics, ud859.EQ, "Go"},
 			{ud859.StartDate, ud859.GT, "2016-11-01"}}, 0},
+		//
+		{[]r{{ud859.Topics, ud859.EQ, "Go"},
+			{ud859.StartDate, ud859.GT, "2016-01-01"}}, 2},
 	}
 
 	for _, tt_donotuse := range tts {
@@ -432,7 +437,6 @@ func queryFilters(c *client, t *testing.T) {
 
 			w, err := c.do("/ConferenceAPI.QueryConferences", query)
 			if w.Code != http.StatusOK {
-				t.Logf("%v", w.Body)
 				t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
 			}
 
