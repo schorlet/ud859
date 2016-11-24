@@ -44,7 +44,7 @@ func (q ConferenceQueryForm) Query() (*datastore.Query, error) {
 		// order first by the inequality filter
 		query = query.Order(string(q.inequalityFilter.Field))
 	}
-	query = query.Order("Name")
+	query = query.Order(Name)
 
 	for _, filter := range q.Filters {
 		query = query.Filter(
@@ -83,7 +83,7 @@ func (ConferenceAPI) ConferencesCreated(c context.Context) (*Conferences, error)
 
 	// get the conferences whose parent is the profile key
 	conferences := make([]*Conference, 0)
-	query := datastore.NewQuery("Conference").Ancestor(pkey).Order("Name")
+	query := datastore.NewQuery("Conference").Ancestor(pkey).Order(Name)
 
 	keys, err := query.GetAll(c, &conferences)
 	if err != nil {

@@ -1,0 +1,26 @@
+indexes:
+
+- kind: Conference
+  properties:
+  - name: CITY
+  - name: NAME
+
+- kind: Conference
+  properties:
+  - name: MAX_ATTENDEES
+  - name: NAME
+
+- kind: Conference
+  properties:
+  - name: MONTH
+  - name: NAME
+
+- kind: Conference
+  properties:
+  - name: TOPIC
+  - name: NAME
+
+- kind: Conference
+  ancestor: yes
+  properties:
+  - name: NAME

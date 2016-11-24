@@ -137,7 +137,7 @@ func getProfile(c *client, t *testing.T) {
 
 func saveProfile(c *client, t *testing.T) {
 	form := &ud859.ProfileForm{
-		DisplayName:  "ud859",
+		DisplayName:  "bob",
 		TeeShirtSize: ud859.SizeXL,
 	}
 
@@ -385,6 +385,10 @@ func queryFilters(c *client, t *testing.T) {
 		restrictions []r
 		expected     int
 	}{
+		{[]r{{ud859.Name, ud859.EQ, "dotGo"}}, 1},
+		{[]r{{ud859.Name, ud859.EQ, "gophercon"}}, 1},
+		{[]r{{ud859.Name, ud859.EQ, "Denver"}}, 0},
+		//
 		{[]r{{ud859.City, ud859.EQ, "Paris"}}, 1},
 		{[]r{{ud859.City, ud859.EQ, "London"}}, 0},
 		{[]r{{ud859.City, ud859.EQ, "Denver"}}, 0},

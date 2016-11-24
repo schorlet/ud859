@@ -10,35 +10,34 @@ import (
 
 // Supported query operators.
 const (
-	EQ  string = "="
-	LT         = "<"
-	GT         = ">"
-	LTE        = "<="
-	GTE        = ">="
+	EQ  = "="
+	LT  = "<"
+	GT  = ">"
+	LTE = "<="
+	GTE = ">="
 )
 
 // Query fields.
 const (
-	Name           string = "Name"
-	City                  = "City"
-	Topics                = "Topics"
-	StartDate             = "StartDate"
-	EndDate               = "EndDate"
-	Month                 = "Month"
-	MaxAttendees          = "MaxAttendees"
-	SeatsAvailable        = "SeatsAvailable"
+	Name           = "NAME"
+	City           = "CITY"
+	Topics         = "TOPIC"
+	StartDate      = "START_DATE"
+	EndDate        = "END_DATE"
+	Month          = "MONTH"
+	MaxAttendees   = "MAX_ATTENDEES"
+	SeatsAvailable = "SEATS_AVAILABLE"
 )
 
 // TeeShirt sizes.
 const (
-	SizeNO   string = ""
-	SizeXS          = "XS"
-	SizeS           = "S"
-	SizeM           = "M"
-	SizeL           = "L"
-	SizeXL          = "XL"
-	SizeXXL         = "XXL"
-	SizeXXXL        = "XXXL"
+	SizeXS   = "XS"
+	SizeS    = "S"
+	SizeM    = "M"
+	SizeL    = "L"
+	SizeXL   = "XL"
+	SizeXXL  = "XXL"
+	SizeXXXL = "XXXL"
 )
 
 // Common errors.
@@ -56,16 +55,16 @@ type (
 	// Conference gives details about a conference.
 	Conference struct {
 		WebsafeKey     string    `json:"websafeKey" datastore:"-"`
-		Name           string    `json:"name"`
-		Description    string    `json:"description"`
-		Organizer      string    `json:"organizerDisplayName"`
-		Topics         []string  `json:"topics"`
-		City           string    `json:"city"`
-		StartDate      time.Time `json:"startDate"`
-		EndDate        time.Time `json:"endDate"`
-		Month          int       `json:"-"`
-		MaxAttendees   int       `json:"maxAttendees"`
-		SeatsAvailable int       `json:"seatsAvailable"`
+		Name           string    `json:"name" datastore:"NAME"`
+		Description    string    `json:"description" datastore:",noindex"`
+		Organizer      string    `json:"organizerDisplayName" datastore:",noindex"`
+		Topics         []string  `json:"topics" datastore:"TOPIC"`
+		City           string    `json:"city" datastore:"CITY"`
+		StartDate      time.Time `json:"startDate" datastore:"START_DATE"`
+		EndDate        time.Time `json:"endDate" datastore:"END_DATE"`
+		Month          int       `json:"-" datastore:"MONTH"`
+		MaxAttendees   int       `json:"maxAttendees" datastore:"MAX_ATTENDEES"`
+		SeatsAvailable int       `json:"seatsAvailable" datastore:"SEATS_AVAILABLE"`
 	}
 
 	// Conferences is a list of Conferences.
@@ -146,8 +145,21 @@ func (f *Filter) UnmarshalJSON(data []byte) error {
 	}
 
 	f.Field = m["field"].(string)
-	f.Op = m["operator"].(string)
 	f.Value = m["value"]
+
+	f.Op = m["operator"].(string)
+	switch f.Op {
+	case "EQ":
+		f.Op = EQ
+	case "LT":
+		f.Op = LT
+	case "GT":
+		f.Op = GT
+	case "LTEQ":
+		f.Op = LTE
+	case "GTEQ":
+		f.Op = GTE
+	}
 
 	if f.Field == Month || f.Field == MaxAttendees ||
 		f.Field == SeatsAvailable {
