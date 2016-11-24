@@ -37,10 +37,14 @@ func withClient(c *client, fn testFunc) func(*testing.T) {
 }
 
 func (c *client) do(url string, v interface{}) (*httptest.ResponseRecorder, error) {
-	return c.doID("", url, v)
+	return c.doAs("", url, v)
 }
 
-func (c *client) doID(email, url string, v interface{}) (*httptest.ResponseRecorder, error) {
+func (c *client) doID(url string, v interface{}) (*httptest.ResponseRecorder, error) {
+	return c.doAs("bob@udacity.com", url, v)
+}
+
+func (c *client) doAs(email, url string, v interface{}) (*httptest.ResponseRecorder, error) {
 	// payload
 	var body io.Reader
 	if v != nil {
@@ -147,7 +151,7 @@ func saveProfile(c *client, t *testing.T) {
 	}
 
 	// save profile
-	w, err = c.doID("ud859@udacity.com", "/ConferenceAPI.SaveProfile", form)
+	w, err = c.doID("/ConferenceAPI.SaveProfile", form)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +162,7 @@ func saveProfile(c *client, t *testing.T) {
 
 	// update profile
 	form.TeeShirtSize = ud859.SizeXXL
-	w, err = c.doID("ud859@udacity.com", "/ConferenceAPI.SaveProfile", form)
+	w, err = c.doID("/ConferenceAPI.SaveProfile", form)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +175,7 @@ func saveProfile(c *client, t *testing.T) {
 
 func verifyProfile(c *client, t *testing.T, form *ud859.ProfileForm) {
 	// get profile
-	w, err := c.doID("ud859@udacity.com", "/ConferenceAPI.GetProfile", nil)
+	w, err := c.doID("/ConferenceAPI.GetProfile", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,7 +257,7 @@ func createConference(c *client, t *testing.T) {
 		}
 
 		// save conference
-		w, err = c.doID("ud859@udacity.com", "/ConferenceAPI.CreateConference", form)
+		w, err = c.doID("/ConferenceAPI.CreateConference", form)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -272,7 +276,7 @@ func createConference(c *client, t *testing.T) {
 	}
 
 	// query conferences created
-	w, err := c.doID("ud859@udacity.com", "/ConferenceAPI.ConferencesCreated", nil)
+	w, err := c.doID("/ConferenceAPI.ConferencesCreated", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -473,7 +477,7 @@ func gotoUnknown(c *client, t *testing.T) {
 
 	for _, tt := range tts {
 		// register
-		w, err := c.doID(tt.email, "/ConferenceAPI.GotoConference", key)
+		w, err := c.doAs(tt.email, "/ConferenceAPI.GotoConference", key)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -482,7 +486,7 @@ func gotoUnknown(c *client, t *testing.T) {
 		}
 
 		// unregister
-		w, err = c.doID(tt.email, "/ConferenceAPI.CancelConference", key)
+		w, err = c.doAs(tt.email, "/ConferenceAPI.CancelConference", key)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -530,7 +534,7 @@ func gotoUnRegistered(c *client, t *testing.T) {
 		key := &ud859.ConferenceKeyForm{WebsafeKey: tt.key}
 
 		// unregister
-		w, err = c.doID(tt.email, "/ConferenceAPI.CancelConference", key)
+		w, err = c.doAs(tt.email, "/ConferenceAPI.CancelConference", key)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -564,7 +568,7 @@ func gotoRegistration(c *client, t *testing.T) {
 		key := &ud859.ConferenceKeyForm{WebsafeKey: conference.WebsafeKey}
 
 		// register
-		w, err = c.doID("ud859@udacity.com", "/ConferenceAPI.GotoConference", key)
+		w, err = c.doID("/ConferenceAPI.GotoConference", key)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -573,7 +577,7 @@ func gotoRegistration(c *client, t *testing.T) {
 		}
 
 		// register twice
-		w, err = c.doID("ud859@udacity.com", "/ConferenceAPI.GotoConference", key)
+		w, err = c.doID("/ConferenceAPI.GotoConference", key)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -588,7 +592,7 @@ func gotoRegistration(c *client, t *testing.T) {
 		key := &ud859.ConferenceKeyForm{WebsafeKey: conference.WebsafeKey}
 
 		// unregister
-		w, err = c.doID("ud859@udacity.com", "/ConferenceAPI.CancelConference", key)
+		w, err = c.doID("/ConferenceAPI.CancelConference", key)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -597,7 +601,7 @@ func gotoRegistration(c *client, t *testing.T) {
 		}
 
 		// unregister twice
-		w, err = c.doID("ud859@udacity.com", "/ConferenceAPI.CancelConference", key)
+		w, err = c.doID("/ConferenceAPI.CancelConference", key)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -639,27 +643,26 @@ func gotoConflict(c *client, t *testing.T) {
 
 		wg := new(sync.WaitGroup)
 		wg.Add(2)
-		nb := make(chan struct{}, 2)
+		codes := make(chan int, 2)
 
 		for _, user := range []string{"user1", "user2"} {
 			go func(email string) {
 				defer wg.Done()
 
 				// register user
-				w, err := c.doID(email, "/ConferenceAPI.GotoConference", key)
+				w, err := c.doAs(email, "/ConferenceAPI.GotoConference", key)
 				if err != nil {
 					t.Fatal(err)
 				}
-				if w.Code == http.StatusConflict {
-					nb <- struct{}{}
-				}
+				codes <- w.Code
 			}(user)
 		}
 		wg.Wait()
-		close(nb)
+		close(codes)
 
-		if len(nb) != 1 {
-			t.Fatalf("want:1, got:%d", len(nb))
+		ok, conflict := <-codes, <-codes
+		if ok*conflict != http.StatusOK*http.StatusConflict {
+			t.Fatalf("got:%d,%d", ok, conflict)
 		}
 
 		// get conference
@@ -685,7 +688,7 @@ func gotoConflict(c *client, t *testing.T) {
 
 func verifyConferencesToAttend(c *client, t *testing.T, count int) {
 	// query conferences to attend
-	w, err := c.doID("ud859@udacity.com", "/ConferenceAPI.ConferencesToAttend", nil)
+	w, err := c.doID("/ConferenceAPI.ConferencesToAttend", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
