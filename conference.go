@@ -36,7 +36,7 @@ func getConference(c context.Context, key *datastore.Key) (*Conference, error) {
 }
 
 // CreateConference creates a Conference with the specified form.
-func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (*ConferenceKeyForm, error) {
+func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (*ConferenceCreated, error) {
 	pkey, err := profileKey(c)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,10 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 		return nil, err
 	}
 
-	return &ConferenceKeyForm{conference.WebsafeKey}, nil
+	return &ConferenceCreated{
+		Name:       conference.Name,
+		WebsafeKey: conference.WebsafeKey,
+	}, nil
 }
 
 // FromConferenceForm returns a new Conference from the specified ConferenceForm.

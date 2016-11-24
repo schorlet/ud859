@@ -87,6 +87,12 @@ type (
 		WebsafeKey string `json:"websafeConferenceKey" endpoints:"req"`
 	}
 
+	// ConferenceCreated gives details about the created conference.
+	ConferenceCreated struct {
+		Name       string `json:"name"`
+		WebsafeKey string `json:"websafeConferenceKey"`
+	}
+
 	// ConferenceQueryForm collects filters for searching for Conferences.
 	ConferenceQueryForm struct {
 		Filters          []*Filter `json:"filters"`

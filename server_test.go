@@ -265,13 +265,17 @@ func createConference(c *client, t *testing.T) {
 			t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
 		}
 
-		// decode the conference key
-		key := new(ud859.ConferenceKeyForm)
-		err = json.NewDecoder(w.Body).Decode(key)
+		// decode the conference created
+		created := new(ud859.ConferenceCreated)
+		err = json.NewDecoder(w.Body).Decode(created)
 		if err != nil {
 			t.Fatal(err)
 		}
+		if created.Name != form.Name {
+			t.Errorf("want:%s, got:%s", form.Name, created.Name)
+		}
 
+		key := &ud859.ConferenceKeyForm{WebsafeKey: created.WebsafeKey}
 		verifyConference(c, t, key, form)
 	}
 
