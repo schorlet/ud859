@@ -2,6 +2,7 @@ package ud859
 
 import (
 	"encoding/json"
+	"strconv"
 	"time"
 
 	"github.com/GoogleCloudPlatform/go-endpoints/endpoints"
@@ -62,6 +63,7 @@ type (
 		City           string    `json:"city"`
 		StartDate      time.Time `json:"startDate"`
 		EndDate        time.Time `json:"endDate"`
+		Month          int       `json:"-"`
 		MaxAttendees   int       `json:"maxAttendees"`
 		SeatsAvailable int       `json:"seatsAvailable"`
 	}
@@ -147,8 +149,19 @@ func (f *Filter) UnmarshalJSON(data []byte) error {
 	f.Op = m["operator"].(string)
 	f.Value = m["value"]
 
-	if f.Field == MaxAttendees || f.Field == SeatsAvailable {
-		f.Value = int(f.Value.(float64))
+	if f.Field == Month || f.Field == MaxAttendees ||
+		f.Field == SeatsAvailable {
+		switch v := f.Value.(type) {
+		case string:
+			f.Value, err = strconv.Atoi(v)
+			if err != nil {
+				return errBadRequest(err, "unable to parse "+f.Field)
+			}
+		case float64:
+			f.Value = int(v)
+		default:
+			return errBadRequest(err, "unable to parse "+f.Field)
+		}
 
 	} else if f.Field == StartDate || f.Field == EndDate {
 		switch v := f.Value.(type) {

@@ -82,20 +82,22 @@ func FromConferenceForm(form *ConferenceForm) (*Conference, error) {
 	conference.Topics = form.Topics
 	conference.City = form.City
 
-	if form.StartDate != "" {
-		startDate, err := time.Parse(time.RFC3339, form.StartDate)
-		if err != nil {
-			return nil, errBadRequest(err, "unable to parse start date")
-		}
-		conference.StartDate = startDate
-	}
-
 	if form.EndDate != "" {
 		endDate, err := time.Parse(time.RFC3339, form.EndDate)
 		if err != nil {
 			return nil, errBadRequest(err, "unable to parse end date")
 		}
 		conference.EndDate = endDate
+		conference.Month = int(endDate.Month())
+	}
+
+	if form.StartDate != "" {
+		startDate, err := time.Parse(time.RFC3339, form.StartDate)
+		if err != nil {
+			return nil, errBadRequest(err, "unable to parse start date")
+		}
+		conference.StartDate = startDate
+		conference.Month = int(startDate.Month())
 	}
 
 	if form.MaxAttendees != "" {

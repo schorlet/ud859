@@ -402,6 +402,14 @@ func queryFilters(c *client, t *testing.T) {
 		{[]r{{ud859.MaxAttendees, ud859.LT, 10}}, 1},
 		{[]r{{ud859.MaxAttendees, ud859.LTE, 10}}, 2},
 		//
+		{[]r{{ud859.Month, ud859.EQ, 7}}, 1},
+		{[]r{{ud859.Month, ud859.EQ, 10}}, 1},
+		{[]r{{ud859.Month, ud859.EQ, 1}}, 0},
+		{[]r{{ud859.Month, ud859.GT, 3}}, 2},
+		{[]r{{ud859.Month, ud859.GT, 8}}, 1},
+		{[]r{{ud859.Month, ud859.LT, 8}}, 1},
+		{[]r{{ud859.Month, ud859.LT, 3}}, 0},
+		//
 		{[]r{{ud859.SeatsAvailable, ud859.GT, 0}}, 2},
 		{[]r{{ud859.SeatsAvailable, ud859.GT, 1}}, 1},
 		{[]r{{ud859.SeatsAvailable, ud859.GTE, 1}}, 2},
