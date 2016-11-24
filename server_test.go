@@ -615,8 +615,6 @@ func gotoRegistration(c *client, t *testing.T) {
 
 		verifyConferencesToAttend(c, t, len(conferences.Items)-i-1)
 	}
-
-	verifyConferencesToAttend(c, t, 0)
 }
 
 func gotoConflict(c *client, t *testing.T) {
@@ -708,5 +706,39 @@ func verifyConferencesToAttend(c *client, t *testing.T, count int) {
 	}
 	if len(conferences.Items) != count {
 		t.Errorf("want:%d, got:%d", count, len(conferences.Items))
+	}
+
+	// get profile
+	w, err = c.doID("/ConferenceAPI.GetProfile", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w.Code != http.StatusOK {
+		t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+	}
+
+	// decode the profile
+	profile := new(ud859.Profile)
+	err = json.NewDecoder(w.Body).Decode(profile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// verify the profile
+	if len(profile.Conferences) != count {
+		t.Errorf("want:%d, got:%d", count, len(profile.Conferences))
+	}
+
+	for _, key := range profile.Conferences {
+		found := false
+		for _, conference := range conferences.Items {
+			if key == conference.WebsafeKey {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("key not found:%s", key)
+		}
 	}
 }

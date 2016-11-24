@@ -61,13 +61,18 @@ func (ConferenceAPI) SaveProfile(c context.Context, form *ProfileForm) error {
 		return err
 	}
 
-	// set the form values
-	profile := &Profile{
-		Email:        pid.email,
-		DisplayName:  form.DisplayName,
-		TeeShirtSize: form.TeeShirtSize,
-	}
+	return datastore.RunInTransaction(c, func(c context.Context) error {
+		// get the profile
+		profile, err := getProfile(c, pid)
+		if err != nil {
+			return err
+		}
 
-	_, err = datastore.Put(c, pid.key, profile)
-	return err
+		// set the form values
+		profile.DisplayName = form.DisplayName
+		profile.TeeShirtSize = form.TeeShirtSize
+
+		_, err = datastore.Put(c, pid.key, profile)
+		return err
+	}, nil)
 }
