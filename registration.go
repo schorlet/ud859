@@ -6,13 +6,13 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-func (p *Profile) register(conferenceID int64) {
-	p.Conferences = append(p.Conferences, conferenceID)
+func (p *Profile) register(safeKey string) {
+	p.Conferences = append(p.Conferences, safeKey)
 }
 
-func (p *Profile) unRegister(conferenceID int64) {
-	for i, id := range p.Conferences {
-		if id == conferenceID {
+func (p *Profile) unRegister(safeKey string) {
+	for i, key := range p.Conferences {
+		if key == safeKey {
 			p.Conferences = append(p.Conferences[:i], p.Conferences[i+1:]...)
 			break
 		}
@@ -20,9 +20,9 @@ func (p *Profile) unRegister(conferenceID int64) {
 }
 
 // HasRegistered returns true if the user has registered to the specified conference ID.
-func (p Profile) HasRegistered(conferenceID int64) bool {
-	for _, id := range p.Conferences {
-		if id == conferenceID {
+func (p Profile) HasRegistered(safeKey string) bool {
+	for _, key := range p.Conferences {
+		if key == safeKey {
 			return true
 		}
 	}
@@ -53,7 +53,7 @@ func (ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyForm) 
 			return errBadRequest(err, "conference does not exist")
 		}
 
-		if profile.HasRegistered(conference.ID) {
+		if profile.HasRegistered(conference.WebsafeKey) {
 			return ErrRegistered
 		}
 		if conference.SeatsAvailable <= 0 {
@@ -61,7 +61,7 @@ func (ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyForm) 
 		}
 
 		// register to the conference
-		profile.register(conference.ID)
+		profile.register(conference.WebsafeKey)
 		_, err = datastore.Put(c, pid.key, profile)
 		if err != nil {
 			return err
@@ -99,12 +99,12 @@ func (ConferenceAPI) CancelConference(c context.Context, form *ConferenceKeyForm
 			return errBadRequest(err, "conference does not exist")
 		}
 
-		if !profile.HasRegistered(conference.ID) {
+		if !profile.HasRegistered(conference.WebsafeKey) {
 			return ErrNotRegistered
 		}
 
 		// unregister from the conference
-		profile.unRegister(conference.ID)
+		profile.unRegister(conference.WebsafeKey)
 		_, err = datastore.Put(c, pid.key, profile)
 		if err != nil {
 			return err

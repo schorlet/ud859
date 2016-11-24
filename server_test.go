@@ -316,9 +316,6 @@ func verifyConference(c *client, t *testing.T,
 	}
 
 	// verify the conference
-	if conference.ID != 0 {
-		t.Errorf("want:0, got:%d", conference.ID)
-	}
 	if conference.WebsafeKey == "" {
 		t.Error("conference.WebsafeKey is empty")
 	}

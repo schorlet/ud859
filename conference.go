@@ -31,9 +31,7 @@ func getConference(c context.Context, key *datastore.Key) (*Conference, error) {
 		return nil, errNotFound(err, "conference not found")
 	}
 
-	conference.ID = key.IntID()
 	conference.WebsafeKey = key.Encode()
-
 	return conference, nil
 }
 
@@ -44,14 +42,14 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 		return nil, err
 	}
 
-	// incomplete conference key
-	ckey := conferenceKey(c, 0, pkey)
-
 	// create a new conference
 	conference, err := FromConferenceForm(form)
 	if err != nil {
 		return nil, err
 	}
+
+	// incomplete conference key
+	ckey := conferenceKey(c, 0, pkey)
 
 	err = datastore.RunInTransaction(c, func(c context.Context) error {
 		// save the conference
@@ -59,7 +57,6 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 		if err != nil {
 			return err
 		}
-		conference.ID = key.IntID()
 		conference.WebsafeKey = key.Encode()
 
 		// create task ...

@@ -54,7 +54,6 @@ type (
 
 	// Conference gives details about a conference.
 	Conference struct {
-		ID             int64     `json:"-" datastore:"-"`
 		WebsafeKey     string    `json:"websafeKey" datastore:"-"`
 		Name           string    `json:"name"`
 		Description    string    `json:"description"`
@@ -96,10 +95,10 @@ type (
 
 	// Profile gives details about an identified user.
 	Profile struct {
-		Email        string  `json:"-"`
-		DisplayName  string  `json:"displayName"`
-		TeeShirtSize string  `json:"teeShirtSize"`
-		Conferences  []int64 `json:"-"`
+		Email        string   `json:"-"`
+		DisplayName  string   `json:"displayName"`
+		TeeShirtSize string   `json:"teeShirtSize"`
+		Conferences  []string `json:"conferenceKeysToAttend"`
 	}
 
 	// ProfileForm gives details about a profile to create or update.

@@ -68,7 +68,6 @@ func (ConferenceAPI) QueryConferences(c context.Context, form *ConferenceQueryFo
 	}
 
 	for i := 0; i < len(conferences); i++ {
-		conferences[i].ID = keys[i].IntID()
 		conferences[i].WebsafeKey = keys[i].Encode()
 	}
 
@@ -92,7 +91,6 @@ func (ConferenceAPI) ConferencesCreated(c context.Context) (*Conferences, error)
 	}
 
 	for i := 0; i < len(conferences); i++ {
-		conferences[i].ID = keys[i].IntID()
 		conferences[i].WebsafeKey = keys[i].Encode()
 	}
 
@@ -119,8 +117,11 @@ func (ConferenceAPI) ConferencesToAttend(c context.Context) (*Conferences, error
 
 	// get the conference keys
 	keys := make([]*datastore.Key, len(profile.Conferences))
-	for i, conferenceID := range profile.Conferences {
-		keys[i] = conferenceKey(c, conferenceID, pid.key)
+	for i, safeKey := range profile.Conferences {
+		keys[i], err = datastore.DecodeKey(safeKey)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// get the conferences
@@ -131,7 +132,6 @@ func (ConferenceAPI) ConferencesToAttend(c context.Context) (*Conferences, error
 	}
 
 	for i := 0; i < len(conferences); i++ {
-		conferences[i].ID = keys[i].IntID()
 		conferences[i].WebsafeKey = keys[i].Encode()
 	}
 
