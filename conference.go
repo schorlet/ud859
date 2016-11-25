@@ -37,7 +37,7 @@ func getConference(c context.Context, key *datastore.Key) (*Conference, error) {
 
 // CreateConference creates a Conference with the specified form.
 func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (*ConferenceCreated, error) {
-	pkey, err := profileKey(c)
+	pid, err := profileID(c)
 	if err != nil {
 		return nil, err
 	}
@@ -48,8 +48,15 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 		return nil, err
 	}
 
+	// get the profile
+	profile, err := getProfile(c, pid)
+	if err != nil {
+		return nil, err
+	}
+	conference.Organizer = profile.DisplayName
+
 	// incomplete conference key
-	ckey := conferenceKey(c, 0, pkey)
+	ckey := conferenceKey(c, 0, pid.key)
 
 	err = datastore.RunInTransaction(c, func(c context.Context) error {
 		// save the conference

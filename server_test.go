@@ -330,6 +330,9 @@ func verifyConference(c *client, t *testing.T,
 	if conference.Name != form.Name {
 		t.Errorf("want:%s, got:%s", form.Name, conference.Name)
 	}
+	if conference.Organizer != "bob" {
+		t.Errorf("want:%s, got:%s", "bob", conference.Organizer)
+	}
 
 	startDate := conference.StartDate.Format(time.RFC3339)
 	if startDate != form.StartDate {
