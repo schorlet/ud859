@@ -1,7 +1,11 @@
 // Package ud859 is an implementation of the udacity course at http://udacity.com/course/ud859.
 package ud859
 
-import "github.com/GoogleCloudPlatform/go-endpoints/endpoints"
+import (
+	"net/http"
+
+	"github.com/GoogleCloudPlatform/go-endpoints/endpoints"
+)
 
 const clientID = "YOUR-CLIENT-ID"
 
@@ -17,9 +21,7 @@ func init() {
 		panic(err)
 	}
 	server.HandleHTTP(nil)
-
-	// http://localhost:8080/_ah/api/explorer
-	// http://localhost:8080/_ah/api/discovery/v1/apis/conference/v1/rest
+	http.HandleFunc("/tasks/send_confirmation_email", sendConfirmationEmail)
 }
 
 // RegisterConferenceAPI registers the ConferenceAPI with the server.

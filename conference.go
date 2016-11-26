@@ -1,12 +1,19 @@
 package ud859
 
 import (
+	"fmt"
+	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
 	"golang.org/x/net/context"
 
+	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/log"
+	"google.golang.org/appengine/mail"
+	"google.golang.org/appengine/taskqueue"
 )
 
 // conferenceKey returns the datastore key associated with the specified conference ID.
@@ -58,6 +65,9 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 	// incomplete conference key
 	ckey := conferenceKey(c, 0, pid.key)
 
+	// conference info
+	info := conference.String()
+
 	err = datastore.RunInTransaction(c, func(c context.Context) error {
 		// save the conference
 		key, err := datastore.Put(c, ckey, conference)
@@ -66,8 +76,14 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 		}
 		conference.WebsafeKey = key.Encode()
 
-		// create task ...
-		return nil
+		// create confirmation task
+		task := taskqueue.NewPOSTTask("/tasks/send_confirmation_email",
+			url.Values{
+				"email": {profile.Email},
+				"info":  {info},
+			})
+		_, err = taskqueue.Add(c, task, "")
+		return err
 	}, nil)
 
 	if err != nil {
@@ -78,6 +94,28 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 		Name:       conference.Name,
 		WebsafeKey: conference.WebsafeKey,
 	}, nil
+}
+
+func sendConfirmationEmail(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+
+	email := r.FormValue("email")
+	info := r.FormValue("info")
+	if email == "" || info == "" {
+		return
+	}
+
+	msg := &mail.Message{
+		Sender:  fmt.Sprintf("noreply@%s.appspotmail.com", appengine.AppID(c)),
+		To:      []string{email},
+		Subject: "You created a new Conference!",
+		Body:    "Hi, you have created the following conference:\n" + info,
+	}
+
+	if err := mail.Send(c, msg); err != nil {
+		log.Errorf(c, "could not send email: %v", err)
+		http.Error(w, "", http.StatusInternalServerError)
+	}
 }
 
 // FromConferenceForm returns a new Conference from the specified ConferenceForm.

@@ -10,6 +10,10 @@ handlers:
   script: _go_app
   secure: always
 
+- url: /tasks/send_confirmation_email
+  script: _go_app
+  login: admin
+
 - url: /((css|fonts|img|js|partials)/.+)$
   static_files: webapp/\1
   upload: webapp

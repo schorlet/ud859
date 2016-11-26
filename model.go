@@ -1,7 +1,9 @@
 package ud859
 
 import (
+	"bytes"
 	"encoding/json"
+	"html/template"
 	"strconv"
 	"time"
 
@@ -188,6 +190,25 @@ func (f *Filter) UnmarshalJSON(data []byte) error {
 		}
 	}
 	return nil
+}
+
+var conferenceTemplate = template.Must(template.New("text").Parse(`
+Name: {{.Name}}
+Description: {{.Description}}
+Topics: {{.Topics}}
+City: {{.City}}
+StartDate: {{.StartDate}}
+EndDate: {{.EndDate}}
+MaxAttendees: {{.MaxAttendees}}
+`))
+
+func (c *Conference) String() string {
+	buf := new(bytes.Buffer)
+	err := conferenceTemplate.Execute(buf, c)
+	if err != nil {
+		return err.Error()
+	}
+	return buf.String()
 }
 
 func errBadRequest(cause error, message string) error {
