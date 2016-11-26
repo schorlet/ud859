@@ -62,11 +62,14 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 	}
 	conference.Organizer = profile.DisplayName
 
+	// conference info
+	info, err := conferenceInfo(conference)
+	if err != nil {
+		return nil, err
+	}
+
 	// incomplete conference key
 	ckey := conferenceKey(c, 0, pid.key)
-
-	// conference info
-	info := conference.String()
 
 	err = datastore.RunInTransaction(c, func(c context.Context) error {
 		// save the conference

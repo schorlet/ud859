@@ -19,7 +19,7 @@ func (p *Profile) unRegister(safeKey string) {
 	}
 }
 
-// HasRegistered returns true if the user has registered to the specified conference ID.
+// HasRegistered returns true if the user has registered to the specified conference key.
 func (p Profile) HasRegistered(safeKey string) bool {
 	for _, key := range p.Conferences {
 		if key == safeKey {

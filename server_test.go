@@ -23,6 +23,8 @@ import (
 	"google.golang.org/appengine/user"
 )
 
+const emailTest = "bob@email"
+
 type client struct {
 	server *endpoints.Server
 	inst   aetest.Instance
@@ -41,7 +43,7 @@ func (c *client) do(url string, v interface{}) (*httptest.ResponseRecorder, erro
 }
 
 func (c *client) doID(url string, v interface{}) (*httptest.ResponseRecorder, error) {
-	return c.doAs("bob@udacity.com", url, v)
+	return c.doAs(emailTest, url, v)
 }
 
 func (c *client) doAs(email, url string, v interface{}) (*httptest.ResponseRecorder, error) {
@@ -491,7 +493,7 @@ func gotoUnknown(c *client, t *testing.T) {
 		status int
 	}{
 		{"", http.StatusUnauthorized},
-		{"ud859@udacity.com", http.StatusBadRequest},
+		{emailTest, http.StatusBadRequest},
 	}
 
 	for _, tt := range tts {
@@ -546,7 +548,7 @@ func gotoUnRegistered(c *client, t *testing.T) {
 		tts = append(tts,
 			test{"", c.WebsafeKey, http.StatusUnauthorized})
 		tts = append(tts,
-			test{"ud859@udacity.com", c.WebsafeKey, http.StatusConflict})
+			test{emailTest, c.WebsafeKey, http.StatusConflict})
 	}
 
 	for _, tt := range tts {

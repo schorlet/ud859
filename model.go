@@ -193,22 +193,19 @@ func (f *Filter) UnmarshalJSON(data []byte) error {
 }
 
 var conferenceTemplate = template.Must(template.New("text").Parse(`
-Name: {{.Name}}
-Description: {{.Description}}
-Topics: {{.Topics}}
-City: {{.City}}
-StartDate: {{.StartDate}}
-EndDate: {{.EndDate}}
-MaxAttendees: {{.MaxAttendees}}
+	Name: {{.Name}}
+	Description: {{.Description}}
+	Topics: {{.Topics}}
+	City: {{.City}}
+	StartDate: {{.StartDate}}
+	EndDate: {{.EndDate}}
+	MaxAttendees: {{.MaxAttendees}}
 `))
 
-func (c *Conference) String() string {
+func conferenceInfo(c *Conference) (string, error) {
 	buf := new(bytes.Buffer)
 	err := conferenceTemplate.Execute(buf, c)
-	if err != nil {
-		return err.Error()
-	}
-	return buf.String()
+	return buf.String(), err
 }
 
 func errBadRequest(cause error, message string) error {
