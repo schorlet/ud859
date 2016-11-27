@@ -13,6 +13,7 @@ import (
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
 	"google.golang.org/appengine/mail"
+	"google.golang.org/appengine/memcache"
 	"google.golang.org/appengine/taskqueue"
 )
 
@@ -91,6 +92,12 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 
 	if err != nil {
 		return nil, err
+	}
+
+	// clear cache
+	err = memcache.Delete(c, "CACHE_NO_FILTERS")
+	if err != nil {
+		log.Errorf(c, "unable to delete cache: %v", err)
 	}
 
 	return &ConferenceCreated{

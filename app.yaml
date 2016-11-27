@@ -10,6 +10,10 @@ handlers:
   script: _go_app
   secure: always
 
+- url: /_ah/queue/go/delay
+  script: _go_app
+  login: admin
+
 - url: /tasks/send_confirmation_email
   script: _go_app
   login: admin
