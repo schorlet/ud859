@@ -8,6 +8,25 @@ import (
 	"github.com/GoogleCloudPlatform/go-endpoints/endpoints"
 )
 
+// Profile gives details about an identified user.
+type Profile struct {
+	Email        string   `json:"-"`
+	DisplayName  string   `json:"displayName"`
+	TeeShirtSize string   `json:"teeShirtSize"`
+	Conferences  []string `json:"conferenceKeysToAttend"`
+}
+
+// ProfileForm gives details about a profile to create or update.
+type ProfileForm struct {
+	DisplayName  string `json:"displayName"`
+	TeeShirtSize string `json:"teeShirtSize"`
+}
+
+type identity struct {
+	key   *datastore.Key
+	email string
+}
+
 // profileKey returns a datastore key for the identified user.
 func profileKey(c context.Context) (*datastore.Key, error) {
 	u, err := endpoints.CurrentUser(c, scopes, audiences, clientIds)
@@ -15,11 +34,6 @@ func profileKey(c context.Context) (*datastore.Key, error) {
 		return nil, ErrUnauthorized
 	}
 	return datastore.NewKey(c, "Profile", u.String(), 0, nil), nil
-}
-
-type identity struct {
-	key   *datastore.Key
-	email string
 }
 
 func profileID(c context.Context) (*identity, error) {

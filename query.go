@@ -2,15 +2,24 @@ package ud859
 
 import (
 	"fmt"
-	"time"
 
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/datastore"
-	"google.golang.org/appengine/delay"
-	"google.golang.org/appengine/log"
-	"google.golang.org/appengine/memcache"
 )
+
+// ConferenceQueryForm collects filters for searching for Conferences.
+type ConferenceQueryForm struct {
+	Filters          []*Filter `json:"filters"`
+	inequalityFilter *Filter
+}
+
+// Filter describes a query restriction.
+type Filter struct {
+	Field string      `endpoints:"req"`
+	Op    string      `endpoints:"req"`
+	Value interface{} `endpoints:"req"`
+}
 
 // Filter adds a filter to the query.
 func (q *ConferenceQueryForm) Filter(field string, op string, value interface{}) *ConferenceQueryForm {
@@ -91,31 +100,6 @@ func (ConferenceAPI) QueryConferences(c context.Context, form *ConferenceQueryFo
 	}
 
 	return items, nil
-}
-
-var setCacheNoFilters = delay.Func("CACHE_NO_FILTERS",
-	func(c context.Context, conferences *Conferences) {
-		item := &memcache.Item{
-			Key:        "CACHE_NO_FILTERS",
-			Object:     conferences,
-			Expiration: 3 * time.Minute,
-		}
-		err := memcache.Gob.Set(c, item)
-		if err != nil {
-			log.Errorf(c, "unable to set cache: %v", err)
-		}
-	})
-
-func getCacheNoFilters(c context.Context) *Conferences {
-	conferences := new(Conferences)
-	_, err := memcache.Gob.Get(c, "CACHE_NO_FILTERS", conferences)
-	if err != nil && err != memcache.ErrCacheMiss {
-		log.Errorf(c, "unable to get cache: %v", err)
-		return nil
-	} else if err != nil {
-		return nil
-	}
-	return conferences
 }
 
 // ConferencesCreated returns the Conferences created by the current user.

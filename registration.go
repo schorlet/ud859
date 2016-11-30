@@ -42,7 +42,7 @@ func (ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyForm) 
 	}
 
 	return datastore.RunInTransaction(c, func(c context.Context) error {
-		errc := make(chan error)
+		errc := make(chan error, 2)
 		var profile *Profile
 		var conference *Conference
 
@@ -108,7 +108,7 @@ func (ConferenceAPI) CancelConference(c context.Context, form *ConferenceKeyForm
 	}
 
 	return datastore.RunInTransaction(c, func(c context.Context) error {
-		errc := make(chan error)
+		errc := make(chan error, 2)
 		var profile *Profile
 		var conference *Conference
 

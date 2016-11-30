@@ -1,9 +1,7 @@
 package ud859
 
 import (
-	"bytes"
 	"encoding/json"
-	"html/template"
 	"strconv"
 	"time"
 
@@ -31,17 +29,6 @@ const (
 	SeatsAvailable = "SEATS_AVAILABLE"
 )
 
-// TeeShirt sizes.
-const (
-	SizeXS   = "XS"
-	SizeS    = "S"
-	SizeM    = "M"
-	SizeL    = "L"
-	SizeXL   = "XL"
-	SizeXXL  = "XXL"
-	SizeXXXL = "XXXL"
-)
-
 // Common errors.
 var (
 	ErrUnauthorized     = endpoints.NewUnauthorizedError("ud859: authorization required")
@@ -50,84 +37,13 @@ var (
 	ErrNoSeatsAvailable = endpoints.NewConflictError("ud859: no seats available")
 )
 
-type (
-	// ConferenceAPI is the conference API.
-	ConferenceAPI struct{}
+func errBadRequest(cause error, message string) error {
+	return endpoints.NewBadRequestError("ud859: %s (%v)", message, cause)
+}
 
-	// Conference gives details about a conference.
-	Conference struct {
-		WebsafeKey     string    `json:"websafeKey" datastore:"-"`
-		Name           string    `json:"name" datastore:"NAME"`
-		Description    string    `json:"description" datastore:",noindex"`
-		Organizer      string    `json:"organizerDisplayName" datastore:",noindex"`
-		Topics         []string  `json:"topics" datastore:"TOPIC"`
-		City           string    `json:"city" datastore:"CITY"`
-		StartDate      time.Time `json:"startDate" datastore:"START_DATE"`
-		EndDate        time.Time `json:"endDate" datastore:"END_DATE"`
-		Month          int       `json:"-" datastore:"MONTH"`
-		MaxAttendees   int       `json:"maxAttendees" datastore:"MAX_ATTENDEES"`
-		SeatsAvailable int       `json:"seatsAvailable" datastore:"SEATS_AVAILABLE"`
-	}
-
-	// Conferences is a list of Conferences.
-	Conferences struct {
-		Items []*Conference `json:"items"`
-	}
-
-	// ConferenceForm gives details about a conference to create.
-	ConferenceForm struct {
-		Name         string   `json:"name" endpoints:"req"`
-		Description  string   `json:"description"`
-		Topics       []string `json:"topics"`
-		City         string   `json:"city"`
-		StartDate    string   `json:"startDate"`
-		EndDate      string   `json:"endDate"`
-		MaxAttendees string   `json:"maxAttendees"`
-	}
-
-	// ConferenceKeyForm is a conference public key.
-	ConferenceKeyForm struct {
-		WebsafeKey string `json:"websafeConferenceKey" endpoints:"req"`
-	}
-
-	// ConferenceCreated gives details about the created conference.
-	ConferenceCreated struct {
-		Name       string `json:"name"`
-		WebsafeKey string `json:"websafeConferenceKey"`
-	}
-
-	// ConferenceQueryForm collects filters for searching for Conferences.
-	ConferenceQueryForm struct {
-		Filters          []*Filter `json:"filters"`
-		inequalityFilter *Filter
-	}
-
-	// Profile gives details about an identified user.
-	Profile struct {
-		Email        string   `json:"-"`
-		DisplayName  string   `json:"displayName"`
-		TeeShirtSize string   `json:"teeShirtSize"`
-		Conferences  []string `json:"conferenceKeysToAttend"`
-	}
-
-	// ProfileForm gives details about a profile to create or update.
-	ProfileForm struct {
-		DisplayName  string `json:"displayName"`
-		TeeShirtSize string `json:"teeShirtSize"`
-	}
-
-	// Announcement is an announcement.
-	Announcement struct {
-		Message string `json:"message"`
-	}
-
-	// Filter describes a query restriction.
-	Filter struct {
-		Field string      `endpoints:"req"`
-		Op    string      `endpoints:"req"`
-		Value interface{} `endpoints:"req"`
-	}
-)
+func errNotFound(cause error, message string) error {
+	return endpoints.NewNotFoundError("ud859: %s (%v)", message, cause)
+}
 
 // MarshalJSON returns *f as the JSON encoding of f.
 func (f *Filter) MarshalJSON() (b []byte, err error) {
@@ -190,28 +106,4 @@ func (f *Filter) UnmarshalJSON(data []byte) error {
 		}
 	}
 	return nil
-}
-
-var conferenceTemplate = template.Must(template.New("text").Parse(`
-	Name: {{.Name}}
-	Description: {{.Description}}
-	Topics: {{.Topics}}
-	City: {{.City}}
-	StartDate: {{.StartDate}}
-	EndDate: {{.EndDate}}
-	MaxAttendees: {{.MaxAttendees}}
-`))
-
-func conferenceInfo(c *Conference) (string, error) {
-	buf := new(bytes.Buffer)
-	err := conferenceTemplate.Execute(buf, c)
-	return buf.String(), err
-}
-
-func errBadRequest(cause error, message string) error {
-	return endpoints.NewBadRequestError("ud859: %s (%v)", message, cause)
-}
-
-func errNotFound(cause error, message string) error {
-	return endpoints.NewNotFoundError("ud859: %s (%v)", message, cause)
 }

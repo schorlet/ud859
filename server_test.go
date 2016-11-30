@@ -140,7 +140,7 @@ func getProfile(c *client, t *testing.T) {
 func saveProfile(c *client, t *testing.T) {
 	form := &ud859.ProfileForm{
 		DisplayName:  "bob",
-		TeeShirtSize: ud859.SizeXL,
+		TeeShirtSize: "XL",
 	}
 
 	// save profile unauthorized
@@ -163,7 +163,7 @@ func saveProfile(c *client, t *testing.T) {
 	verifyProfile(c, t, form)
 
 	// update profile
-	form.TeeShirtSize = ud859.SizeXXL
+	form.TeeShirtSize = "XXL"
 	w, err = c.doID("/ConferenceAPI.SaveProfile", form)
 	if err != nil {
 		t.Fatal(err)

@@ -1,21 +1,59 @@
 package ud859
 
 import (
-	"fmt"
-	"net/http"
+	"bytes"
+	"html/template"
 	"net/url"
 	"strconv"
 	"time"
 
 	"golang.org/x/net/context"
 
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
-	"google.golang.org/appengine/log"
-	"google.golang.org/appengine/mail"
-	"google.golang.org/appengine/memcache"
 	"google.golang.org/appengine/taskqueue"
 )
+
+// Conference gives details about a conference.
+type Conference struct {
+	WebsafeKey     string    `json:"websafeKey" datastore:"-"`
+	Name           string    `json:"name" datastore:"NAME"`
+	Description    string    `json:"description" datastore:",noindex"`
+	Organizer      string    `json:"organizerDisplayName" datastore:",noindex"`
+	Topics         []string  `json:"topics" datastore:"TOPIC"`
+	City           string    `json:"city" datastore:"CITY"`
+	StartDate      time.Time `json:"startDate" datastore:"START_DATE"`
+	EndDate        time.Time `json:"endDate" datastore:"END_DATE"`
+	Month          int       `json:"-" datastore:"MONTH"`
+	MaxAttendees   int       `json:"maxAttendees" datastore:"MAX_ATTENDEES"`
+	SeatsAvailable int       `json:"seatsAvailable" datastore:"SEATS_AVAILABLE"`
+}
+
+// Conferences is a list of Conferences.
+type Conferences struct {
+	Items []*Conference `json:"items"`
+}
+
+// ConferenceForm gives details about a conference to create.
+type ConferenceForm struct {
+	Name         string   `json:"name" endpoints:"req"`
+	Description  string   `json:"description"`
+	Topics       []string `json:"topics"`
+	City         string   `json:"city"`
+	StartDate    string   `json:"startDate"`
+	EndDate      string   `json:"endDate"`
+	MaxAttendees string   `json:"maxAttendees"`
+}
+
+// ConferenceKeyForm is a conference public key.
+type ConferenceKeyForm struct {
+	WebsafeKey string `json:"websafeConferenceKey" endpoints:"req"`
+}
+
+// ConferenceCreated gives details about the created conference.
+type ConferenceCreated struct {
+	Name       string `json:"name"`
+	WebsafeKey string `json:"websafeConferenceKey"`
+}
 
 // conferenceKey returns the datastore key associated with the specified conference ID.
 func conferenceKey(c context.Context, conferenceID int64, pkey *datastore.Key) *datastore.Key {
@@ -64,7 +102,7 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 	conference.Organizer = profile.DisplayName
 
 	// conference info
-	info, err := conferenceInfo(conference)
+	info, err := conferenceText(conference)
 	if err != nil {
 		return nil, err
 	}
@@ -95,10 +133,7 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 	}
 
 	// clear cache
-	err = memcache.Delete(c, "CACHE_NO_FILTERS")
-	if err != nil {
-		log.Errorf(c, "unable to delete cache: %v", err)
-	}
+	_ = deleteCacheNoFilters.Call(c)
 
 	return &ConferenceCreated{
 		Name:       conference.Name,
@@ -106,63 +141,63 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 	}, nil
 }
 
-func sendConfirmationEmail(w http.ResponseWriter, r *http.Request) {
-	c := appengine.NewContext(r)
-
-	email := r.FormValue("email")
-	info := r.FormValue("info")
-	if email == "" || info == "" {
-		return
-	}
-
-	msg := &mail.Message{
-		Sender:  fmt.Sprintf("noreply@%s.appspotmail.com", appengine.AppID(c)),
-		To:      []string{email},
-		Subject: "You created a new Conference!",
-		Body:    "Hi, you have created the following conference:\n" + info,
-	}
-
-	if err := mail.Send(c, msg); err != nil {
-		log.Errorf(c, "could not send email: %v", err)
-		http.Error(w, "", http.StatusInternalServerError)
-	}
-}
-
 // FromConferenceForm returns a new Conference from the specified ConferenceForm.
 func FromConferenceForm(form *ConferenceForm) (*Conference, error) {
-	conference := new(Conference)
-
-	conference.Name = form.Name
-	conference.Description = form.Description
-	conference.Topics = form.Topics
-	conference.City = form.City
-
-	if form.EndDate != "" {
-		endDate, err := time.Parse(time.RFC3339, form.EndDate)
-		if err != nil {
-			return nil, errBadRequest(err, "unable to parse end date")
-		}
-		conference.EndDate = endDate
-		conference.Month = int(endDate.Month())
-	}
+	var (
+		err       error
+		startDate time.Time
+		endDate   time.Time
+		month     int
+		attendees int
+	)
 
 	if form.StartDate != "" {
-		startDate, err := time.Parse(time.RFC3339, form.StartDate)
+		startDate, err = time.Parse(time.RFC3339, form.StartDate)
 		if err != nil {
 			return nil, errBadRequest(err, "unable to parse start date")
 		}
-		conference.StartDate = startDate
-		conference.Month = int(startDate.Month())
+		month = int(startDate.Month())
+	}
+
+	if form.EndDate != "" {
+		endDate, err = time.Parse(time.RFC3339, form.EndDate)
+		if err != nil {
+			return nil, errBadRequest(err, "unable to parse end date")
+		}
 	}
 
 	if form.MaxAttendees != "" {
-		max, err := strconv.Atoi(form.MaxAttendees)
+		attendees, err = strconv.Atoi(form.MaxAttendees)
 		if err != nil {
 			return nil, errBadRequest(err, "unable to parse max attendees")
 		}
-		conference.MaxAttendees = max
-		conference.SeatsAvailable = max
 	}
 
-	return conference, nil
+	return &Conference{
+		Name:           form.Name,
+		Description:    form.Description,
+		Topics:         form.Topics,
+		City:           form.City,
+		StartDate:      startDate,
+		EndDate:        endDate,
+		Month:          month,
+		MaxAttendees:   attendees,
+		SeatsAvailable: attendees,
+	}, nil
+}
+
+var conferenceTemplate = template.Must(template.New("text").Parse(`
+	Name: {{.Name}}
+	Description: {{.Description}}
+	Topics: {{.Topics}}
+	City: {{.City}}
+	StartDate: {{.StartDate}}
+	EndDate: {{.EndDate}}
+	MaxAttendees: {{.MaxAttendees}}
+`))
+
+func conferenceText(c *Conference) (string, error) {
+	buf := new(bytes.Buffer)
+	err := conferenceTemplate.Execute(buf, c)
+	return buf.String(), err
 }
