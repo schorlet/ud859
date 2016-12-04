@@ -16,16 +16,16 @@ import (
 // Conference gives details about a conference.
 type Conference struct {
 	WebsafeKey     string    `json:"websafeKey" datastore:"-"`
-	Name           string    `json:"name" datastore:"NAME"`
+	Name           string    `json:"name" datastore:",noindex"`
 	Description    string    `json:"description" datastore:",noindex"`
 	Organizer      string    `json:"organizerDisplayName" datastore:",noindex"`
-	Topics         []string  `json:"topics" datastore:"TOPIC"`
-	City           string    `json:"city" datastore:"CITY"`
+	Topics         []string  `json:"topics" datastore:",noindex"`
+	City           string    `json:"city" datastore:",noindex"`
 	StartDate      time.Time `json:"startDate" datastore:"START_DATE"`
-	EndDate        time.Time `json:"endDate" datastore:"END_DATE"`
-	Month          int       `json:"-" datastore:"MONTH"`
-	MaxAttendees   int       `json:"maxAttendees" datastore:"MAX_ATTENDEES"`
-	SeatsAvailable int       `json:"seatsAvailable" datastore:"SEATS_AVAILABLE"`
+	EndDate        time.Time `json:"endDate" datastore:",noindex"`
+	Month          int       `json:"-" datastore:",noindex"`
+	MaxAttendees   int       `json:"maxAttendees" datastore:",noindex"`
+	SeatsAvailable int       `json:"seatsAvailable" datastore:",noindex"`
 }
 
 // Conferences is a list of Conferences.
@@ -117,6 +117,12 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 			return err
 		}
 		conference.WebsafeKey = key.Encode()
+
+		// create indexation task
+		err = indexConference(c, conference)
+		if err != nil {
+			return err
+		}
 
 		// create confirmation task
 		task := taskqueue.NewPOSTTask("/tasks/send_confirmation_email",

@@ -15,6 +15,7 @@ const (
 	GT  = ">"
 	LTE = "<="
 	GTE = ">="
+	NE  = "!="
 )
 
 // Query fields.
@@ -77,6 +78,8 @@ func (f *Filter) UnmarshalJSON(data []byte) error {
 		f.Op = LTE
 	case "GTEQ":
 		f.Op = GTE
+	case "NE":
+		f.Op = NE
 	}
 
 	if f.Field == Month || f.Field == MaxAttendees ||

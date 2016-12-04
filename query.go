@@ -1,8 +1,6 @@
 package ud859
 
 import (
-	"fmt"
-
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/datastore"
@@ -10,8 +8,7 @@ import (
 
 // ConferenceQueryForm collects filters for searching for Conferences.
 type ConferenceQueryForm struct {
-	Filters          []*Filter `json:"filters"`
-	inequalityFilter *Filter
+	Filters []*Filter `json:"filters"`
 }
 
 // Filter describes a query restriction.
@@ -27,79 +24,34 @@ func (q *ConferenceQueryForm) Filter(field string, op string, value interface{})
 	return q
 }
 
-// CheckFilters verifies that the inequality filter applys only on the same field.
-func (q *ConferenceQueryForm) CheckFilters() error {
-	var found bool
-
-	for _, filter := range q.Filters {
-		if filter.Op != EQ {
-			if found && filter.Field != q.inequalityFilter.Field {
-				return errBadRequest(nil, "only one inequality filter is allowed")
-			}
-
-			found = true
-			q.inequalityFilter = filter
-		}
-	}
-	return nil
-}
-
-// Query returns the query to apply to the datastore.
-func (q ConferenceQueryForm) Query() (*datastore.Query, error) {
-	err := q.CheckFilters()
-	if err != nil {
-		return nil, err
-	}
-
-	query := datastore.NewQuery("Conference")
-
-	if q.inequalityFilter != nil {
-		// order first by the inequality filter
-		query = query.Order(string(q.inequalityFilter.Field))
-	}
-	query = query.Order(Name)
-
-	for _, filter := range q.Filters {
-		query = query.Filter(
-			fmt.Sprintf("%s %s", filter.Field, filter.Op), filter.Value)
-	}
-
-	return query, nil
-}
-
 // QueryConferences searches for Conferences with the specified filters.
 func (ConferenceAPI) QueryConferences(c context.Context, form *ConferenceQueryForm) (*Conferences, error) {
-	query, err := form.Query()
-	if err != nil {
-		return nil, err
+	// perform search on index
+	if len(form.Filters) > 0 {
+		return SearchConferences(c, form)
 	}
 
 	// get conferences from cache
-	if len(form.Filters) == 0 {
-		conferences := getCacheNoFilters(c)
-		if conferences != nil {
-			return conferences, nil
-		}
+	conferences := getCacheNoFilters(c)
+	if conferences != nil {
+		return conferences, nil
 	}
 
-	conferences := make([]*Conference, 0)
-	keys, err := query.GetAll(c, &conferences)
+	items := make([]*Conference, 0)
+	keys, err := datastore.NewQuery("Conference").Order(StartDate).GetAll(c, &items)
 	if err != nil {
 		return nil, err
 	}
 
-	for i := 0; i < len(conferences); i++ {
-		conferences[i].WebsafeKey = keys[i].Encode()
+	for i := 0; i < len(items); i++ {
+		items[i].WebsafeKey = keys[i].Encode()
 	}
-
-	items := &Conferences{Items: conferences}
+	conferences = &Conferences{Items: items}
 
 	// cache conferences
-	if len(form.Filters) == 0 {
-		_ = setCacheNoFilters.Call(c, items)
-	}
+	_ = setCacheNoFilters.Call(c, conferences)
 
-	return items, nil
+	return conferences, nil
 }
 
 // ConferencesCreated returns the Conferences created by the current user.
@@ -110,19 +62,19 @@ func (ConferenceAPI) ConferencesCreated(c context.Context) (*Conferences, error)
 	}
 
 	// get the conferences whose parent is the profile key
-	conferences := make([]*Conference, 0)
-	query := datastore.NewQuery("Conference").Ancestor(pkey).Order(Name)
+	items := make([]*Conference, 0)
+	query := datastore.NewQuery("Conference").Ancestor(pkey).Order(StartDate)
 
-	keys, err := query.GetAll(c, &conferences)
+	keys, err := query.GetAll(c, &items)
 	if err != nil {
 		return nil, err
 	}
 
-	for i := 0; i < len(conferences); i++ {
-		conferences[i].WebsafeKey = keys[i].Encode()
+	for i := 0; i < len(items); i++ {
+		items[i].WebsafeKey = keys[i].Encode()
 	}
 
-	return &Conferences{Items: conferences}, nil
+	return &Conferences{Items: items}, nil
 }
 
 // ConferencesToAttend returns the Conferences to addend by the current user.
@@ -139,8 +91,8 @@ func (ConferenceAPI) ConferencesToAttend(c context.Context) (*Conferences, error
 	}
 
 	if len(profile.Conferences) == 0 {
-		conferences := make([]*Conference, 0)
-		return &Conferences{Items: conferences}, nil
+		items := make([]*Conference, 0)
+		return &Conferences{Items: items}, nil
 	}
 
 	// get the conference keys
@@ -153,15 +105,16 @@ func (ConferenceAPI) ConferencesToAttend(c context.Context) (*Conferences, error
 	}
 
 	// get the conferences
-	conferences := make([]*Conference, len(profile.Conferences))
-	err = datastore.GetMulti(c, keys, conferences)
+	items := make([]*Conference, len(profile.Conferences))
+	err = datastore.GetMulti(c, keys, items)
 	if err != nil {
 		return nil, err
 	}
 
-	for i := 0; i < len(conferences); i++ {
-		conferences[i].WebsafeKey = keys[i].Encode()
+	for i := 0; i < len(items); i++ {
+		items[i].WebsafeKey = keys[i].Encode()
 	}
 
-	return &Conferences{Items: conferences}, nil
+	// TODO: sort by StartDate
+	return &Conferences{Items: items}, nil
 }

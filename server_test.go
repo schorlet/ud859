@@ -227,16 +227,8 @@ func getConference(c *client, t *testing.T) {
 }
 
 func createConference(c *client, t *testing.T) {
+	// sorted by StartDate
 	forms := []*ud859.ConferenceForm{
-		{
-			Name:         "dotGo",
-			Description:  "The European Go conference",
-			Topics:       []string{"Programming", "Go"},
-			City:         "Paris",
-			StartDate:    "2016-10-10T23:00:00Z",
-			EndDate:      "2016-10-10T23:00:00Z",
-			MaxAttendees: "1",
-		},
 		{
 			Name:         "gophercon",
 			Description:  "Largest event in the world dedicated to the Go programming language",
@@ -245,6 +237,15 @@ func createConference(c *client, t *testing.T) {
 			StartDate:    "2016-07-11T23:00:00Z",
 			EndDate:      "2016-07-13T23:00:00Z",
 			MaxAttendees: "10",
+		},
+		{
+			Name:         "dotGo",
+			Description:  "The European Go conference",
+			Topics:       []string{"Programming", "Go"},
+			City:         "Paris",
+			StartDate:    "2016-10-10T23:00:00Z",
+			EndDate:      "2016-10-10T23:00:00Z",
+			MaxAttendees: "1",
 		},
 	}
 
@@ -391,19 +392,32 @@ func queryFilters(c *client, t *testing.T) {
 		expected     int
 	}{
 		{[]r{{ud859.Name, ud859.EQ, "dotGo"}}, 1},
+		{[]r{{ud859.Name, ud859.NE, "dotGo"}}, 1},
 		{[]r{{ud859.Name, ud859.EQ, "gophercon"}}, 1},
+		{[]r{{ud859.Name, ud859.NE, "gophercon"}}, 1},
 		{[]r{{ud859.Name, ud859.EQ, "Denver"}}, 0},
+		{[]r{{ud859.Name, ud859.NE, "Denver"}}, 2},
 		//
 		{[]r{{ud859.City, ud859.EQ, "Paris"}}, 1},
+		{[]r{{ud859.City, ud859.NE, "Paris"}}, 1},
 		{[]r{{ud859.City, ud859.EQ, "London"}}, 0},
-		{[]r{{ud859.City, ud859.EQ, "Denver"}}, 0},
+		{[]r{{ud859.City, ud859.NE, "London"}}, 2},
+		{[]r{{ud859.City, ud859.EQ, "Denver"}}, 1},
+		{[]r{{ud859.City, ud859.NE, "Denver"}}, 1},
 		{[]r{{ud859.City, ud859.EQ, "Denver, Colorado"}}, 1},
+		{[]r{{ud859.City, ud859.NE, "Denver, Colorado"}}, 1},
 		//
 		{[]r{{ud859.Topics, ud859.EQ, "Go"}}, 2},
+		{[]r{{ud859.Topics, ud859.NE, "Go"}}, 0},
+		{[]r{{ud859.Topics, ud859.EQ, "Go Programming"}}, 2},
 		{[]r{{ud859.Topics, ud859.EQ, "Programming"}}, 2},
 		{[]r{{ud859.Topics, ud859.EQ, "Mountain"}}, 1},
+		{[]r{{ud859.Topics, ud859.NE, "Mountain"}}, 1},
 		{[]r{{ud859.Topics, ud859.EQ, "Dart"}}, 0},
+		{[]r{{ud859.Topics, ud859.NE, "Dart"}}, 2},
 		//
+		{[]r{{ud859.MaxAttendees, ud859.EQ, 1}}, 1},
+		{[]r{{ud859.MaxAttendees, ud859.NE, 1}}, 1},
 		{[]r{{ud859.MaxAttendees, ud859.GT, 0}}, 2},
 		{[]r{{ud859.MaxAttendees, ud859.GT, 1}}, 1},
 		{[]r{{ud859.MaxAttendees, ud859.GTE, 1}}, 2},
@@ -412,13 +426,26 @@ func queryFilters(c *client, t *testing.T) {
 		{[]r{{ud859.MaxAttendees, ud859.LTE, 10}}, 2},
 		//
 		{[]r{{ud859.Month, ud859.EQ, 7}}, 1},
+		{[]r{{ud859.Month, ud859.NE, 7}}, 1},
 		{[]r{{ud859.Month, ud859.EQ, 10}}, 1},
+		{[]r{{ud859.Month, ud859.NE, 10}}, 1},
 		{[]r{{ud859.Month, ud859.EQ, 1}}, 0},
+		{[]r{{ud859.Month, ud859.NE, 1}}, 2},
 		{[]r{{ud859.Month, ud859.GT, 3}}, 2},
 		{[]r{{ud859.Month, ud859.GT, 8}}, 1},
 		{[]r{{ud859.Month, ud859.LT, 8}}, 1},
 		{[]r{{ud859.Month, ud859.LT, 3}}, 0},
 		//
+		// inequality on multiple fields
+		{[]r{{ud859.Month, ud859.GT, 3},
+			{ud859.Topics, ud859.NE, "Dart"},
+			{ud859.MaxAttendees, ud859.LTE, 10}}, 2},
+		{[]r{{ud859.Month, ud859.GT, 3},
+			{ud859.Topics, ud859.EQ, "Dart"},
+			{ud859.MaxAttendees, ud859.LTE, 10}}, 0},
+		//
+		{[]r{{ud859.SeatsAvailable, ud859.EQ, 1}}, 1},
+		{[]r{{ud859.SeatsAvailable, ud859.NE, 1}}, 1},
 		{[]r{{ud859.SeatsAvailable, ud859.GT, 0}}, 2},
 		{[]r{{ud859.SeatsAvailable, ud859.GT, 1}}, 1},
 		{[]r{{ud859.SeatsAvailable, ud859.GTE, 1}}, 2},
@@ -679,9 +706,13 @@ func gotoConflict(c *client, t *testing.T) {
 		wg.Wait()
 		close(codes)
 
-		ok, conflict := <-codes, <-codes
-		if ok*conflict != http.StatusOK*http.StatusConflict {
-			t.Fatalf("got:%d,%d", ok, conflict)
+		// expected errors:
+		// 	StatusConflict: "ud859: no seats available"
+		// 	StatusBadRequest: "API error 2 (datastore_v3: CONCURRENT_TRANSACTION): Concurrency exception."
+		ok, nok := <-codes, <-codes
+		if (ok*nok != http.StatusOK*http.StatusConflict) &&
+			(ok*nok != http.StatusOK*http.StatusBadRequest) {
+			t.Fatalf("got:%d,%d", ok, nok)
 		}
 
 		// get conference
