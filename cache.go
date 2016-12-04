@@ -12,7 +12,7 @@ import (
 
 const keyNoFilters = "CACHE_NO_FILTERS"
 
-var deleteCacheNoFilters = delay.Func("DELETE_NO_FILTERS",
+var deleteCacheNoFilters = delay.Func("delete_no_filters",
 	func(c context.Context) {
 		err := memcache.Delete(c, keyNoFilters)
 		if err != nil {
@@ -20,7 +20,7 @@ var deleteCacheNoFilters = delay.Func("DELETE_NO_FILTERS",
 		}
 	})
 
-var setCacheNoFilters = delay.Func("SET_NO_FILTERS",
+var setCacheNoFilters = delay.Func("set_no_filters",
 	func(c context.Context, conferences *Conferences) {
 		item := &memcache.Item{
 			Key:        keyNoFilters,
@@ -36,10 +36,10 @@ var setCacheNoFilters = delay.Func("SET_NO_FILTERS",
 func getCacheNoFilters(c context.Context) *Conferences {
 	conferences := new(Conferences)
 	_, err := memcache.Gob.Get(c, keyNoFilters, conferences)
-	if err != nil && err != memcache.ErrCacheMiss {
-		log.Errorf(c, "unable to get cache: %v", err)
+	if err == memcache.ErrCacheMiss {
 		return nil
 	} else if err != nil {
+		log.Errorf(c, "unable to get cache: %v", err)
 		return nil
 	}
 	return conferences

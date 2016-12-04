@@ -32,7 +32,7 @@ const (
 
 // Common errors.
 var (
-	ErrUnauthorized     = endpoints.NewUnauthorizedError("ud859: authorization required")
+	ErrUnauthorized     = endpoints.NewUnauthorizedError("ud859: signin required")
 	ErrRegistered       = endpoints.NewConflictError("ud859: already registered")
 	ErrNotRegistered    = endpoints.NewConflictError("ud859: not registered")
 	ErrNoSeatsAvailable = endpoints.NewConflictError("ud859: no seats available")

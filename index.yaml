@@ -1,10 +1,6 @@
 indexes:
 
 - kind: Conference
-  properties:
-  - name: START_DATE
-
-- kind: Conference
   ancestor: yes
   properties:
   - name: START_DATE

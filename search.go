@@ -122,6 +122,7 @@ func isTesting() bool {
 
 func indexConference(c context.Context, conference *Conference) error {
 	if isTesting() {
+		// when testing, update the index without delay
 		return indexConferenceNow(c, conference)
 	}
 	return indexConferenceDelay.Call(c, conference)
