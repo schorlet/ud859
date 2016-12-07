@@ -8,15 +8,16 @@ import (
 	"github.com/GoogleCloudPlatform/go-endpoints/endpoints"
 )
 
-// Profile gives details about an identified user.
+// Profile defines an identified user.
 type Profile struct {
-	Email        string   `json:"-"`
-	DisplayName  string   `json:"displayName"`
-	TeeShirtSize string   `json:"teeShirtSize"`
-	Conferences  []string `json:"conferenceKeysToAttend"`
+	email        string
+	DisplayName  string `json:"displayName"`
+	TeeShirtSize string `json:"teeShirtSize"`
+	// Conferences is a list of conferences WebsafeKey.
+	Conferences []string `json:"conferenceKeysToAttend"`
 }
 
-// ProfileForm gives details about a profile to create or update.
+// ProfileForm gives details about a Profile to create or update.
 type ProfileForm struct {
 	DisplayName  string `json:"displayName"`
 	TeeShirtSize string `json:"teeShirtSize"`
@@ -27,7 +28,7 @@ type identity struct {
 	email string
 }
 
-// profileKey returns a datastore key for the identified user.
+// profileKey returns a datastore key for the identified user or ErrUnauthorized if the identification failed.
 func profileKey(c context.Context) (*datastore.Key, error) {
 	u, err := endpoints.CurrentUser(c, scopes, audiences, clientIds)
 	if err != nil {
@@ -47,7 +48,7 @@ func profileID(c context.Context) (*identity, error) {
 	}, nil
 }
 
-// GetProfile returns the profile associated with the current user.
+// GetProfile returns the Profile associated with the current user.
 func (ConferenceAPI) GetProfile(c context.Context) (*Profile, error) {
 	pid, err := profileID(c)
 	if err != nil {
@@ -64,11 +65,11 @@ func getProfile(c context.Context, pid *identity) (*Profile, error) {
 		return nil, err
 	}
 
-	profile.Email = pid.email
+	profile.email = pid.email
 	return profile, nil
 }
 
-// SaveProfile creates or updates the profile associated with the current user.
+// SaveProfile saves the current user's Profile in the datastore from the specified ProfileForm.
 func (ConferenceAPI) SaveProfile(c context.Context, form *ProfileForm) error {
 	pid, err := profileID(c)
 	if err != nil {

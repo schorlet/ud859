@@ -3,17 +3,15 @@ package ud859
 import (
 	"bytes"
 	"html/template"
-	"net/url"
 	"strconv"
 	"time"
 
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/datastore"
-	"google.golang.org/appengine/taskqueue"
 )
 
-// Conference gives details about a conference.
+// Conference defines a conference.
 type Conference struct {
 	WebsafeKey     string    `json:"websafeKey" datastore:"-"`
 	Name           string    `json:"name" datastore:",noindex"`
@@ -44,23 +42,18 @@ type ConferenceForm struct {
 	MaxAttendees string   `json:"maxAttendees"`
 }
 
-// ConferenceKeyForm is a conference public key.
+// ConferenceKeyForm wraps a conference websafeKey.
 type ConferenceKeyForm struct {
 	WebsafeKey string `json:"websafeConferenceKey" endpoints:"req"`
 }
 
-// ConferenceCreated gives details about the created conference.
+// ConferenceCreated is returned when a conference is created.
 type ConferenceCreated struct {
 	Name       string `json:"name"`
 	WebsafeKey string `json:"websafeConferenceKey"`
 }
 
-// conferenceKey returns the datastore key associated with the specified conference ID.
-func conferenceKey(c context.Context, conferenceID int64, pkey *datastore.Key) *datastore.Key {
-	return datastore.NewKey(c, "Conference", "", conferenceID, pkey)
-}
-
-// GetConference returns the Conference with the specified key.
+// GetConference returns the Conference with the specified ConferenceKeyForm.
 func (ConferenceAPI) GetConference(c context.Context, form *ConferenceKeyForm) (*Conference, error) {
 	key, err := datastore.DecodeKey(form.WebsafeKey)
 	if err != nil {
@@ -81,7 +74,7 @@ func getConference(c context.Context, key *datastore.Key) (*Conference, error) {
 	return conference, nil
 }
 
-// CreateConference creates a Conference with the specified form.
+// CreateConference creates a Conference in the datastore from the specified ConferenceForm.
 func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (*ConferenceCreated, error) {
 	pid, err := profileID(c)
 	if err != nil {
@@ -89,7 +82,7 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 	}
 
 	// create a new conference
-	conference, err := FromConferenceForm(form)
+	conference, err := fromConferenceForm(form)
 	if err != nil {
 		return nil, err
 	}
@@ -101,14 +94,14 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 	}
 	conference.Organizer = profile.DisplayName
 
-	// conference info
-	info, err := conferenceText(conference)
+	// body of the confirmation email
+	body, err := conferenceText(conference)
 	if err != nil {
 		return nil, err
 	}
 
 	// incomplete conference key
-	ckey := conferenceKey(c, 0, pid.key)
+	ckey := datastore.NewIncompleteKey(c, "Conference", pid.key)
 
 	err = datastore.RunInTransaction(c, func(c context.Context) error {
 		// save the conference
@@ -125,13 +118,7 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 		}
 
 		// create confirmation task
-		task := taskqueue.NewPOSTTask("/tasks/send_confirmation_email",
-			url.Values{
-				"email": {profile.Email},
-				"info":  {info},
-			})
-		_, err = taskqueue.Add(c, task, "")
-		return err
+		return sendConfirmation(c, profile.email, body)
 	}, nil)
 
 	if err != nil {
@@ -147,8 +134,8 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 	}, nil
 }
 
-// FromConferenceForm returns a new Conference from the specified ConferenceForm.
-func FromConferenceForm(form *ConferenceForm) (*Conference, error) {
+// fromConferenceForm creates a new Conference from a ConferenceForm.
+func fromConferenceForm(form *ConferenceForm) (*Conference, error) {
 	var (
 		err       error
 		startDate time.Time

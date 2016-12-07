@@ -12,8 +12,8 @@ import (
 	"google.golang.org/appengine/search"
 )
 
-// ConferenceDoc is an indexed conference.
-type ConferenceDoc struct {
+// conferenceDoc defines an indexed Conference.
+type conferenceDoc struct {
 	WebsafeKey     search.Atom `json:"websafeKey" search:"KEY"`
 	Name           string      `json:"name" search:"NAME"`
 	Description    string      `json:"description" search:"DESCRIPTION"`
@@ -26,9 +26,9 @@ type ConferenceDoc struct {
 	SeatsAvailable float64     `json:"seatsAvailable" search:"SEATS_AVAILABLE"`
 }
 
-// FromConference creates a ConferenceDoc from a Conference.
-func FromConference(conference *Conference) *ConferenceDoc {
-	return &ConferenceDoc{
+// fromConference creates a conferenceDoc from a Conference.
+func fromConference(conference *Conference) *conferenceDoc {
+	return &conferenceDoc{
 		WebsafeKey:     search.Atom(conference.WebsafeKey),
 		Name:           conference.Name,
 		Description:    conference.Description,
@@ -42,8 +42,8 @@ func FromConference(conference *Conference) *ConferenceDoc {
 	}
 }
 
-// FromConferenceDoc creates a Conference from a ConferenceDoc.
-func FromConferenceDoc(doc *ConferenceDoc) *Conference {
+// fromConferenceDoc creates a Conference from a conferenceDoc.
+func fromConferenceDoc(doc *conferenceDoc) *Conference {
 	return &Conference{
 		WebsafeKey:     string(doc.WebsafeKey),
 		Name:           doc.Name,
@@ -58,8 +58,8 @@ func FromConferenceDoc(doc *ConferenceDoc) *Conference {
 	}
 }
 
-// Query returns the query to apply to the search index.
-func (q ConferenceQueryForm) Query() string {
+// query returns the query string to apply to the search index.
+func (q ConferenceQueryForm) query() string {
 	var str string
 	for _, filter := range q.Filters {
 		field := filter.Field
@@ -89,18 +89,17 @@ func alphaNumeric(r rune) rune {
 	return ' '
 }
 
-// SearchConferences searches for Conferences with the specified filters.
-func SearchConferences(c context.Context, form *ConferenceQueryForm) (*Conferences, error) {
+func searchConferences(c context.Context, form *ConferenceQueryForm) (*Conferences, error) {
 	index, err := search.Open("Conference")
 	if err != nil {
 		return nil, err
 	}
 
-	it := index.Search(c, form.Query(), nil)
+	it := index.Search(c, form.query(), nil)
 	conferences := new(Conferences)
 
 	for {
-		doc := new(ConferenceDoc)
+		doc := new(conferenceDoc)
 
 		_, err := it.Next(doc)
 		if err == search.Done {
@@ -109,7 +108,7 @@ func SearchConferences(c context.Context, form *ConferenceQueryForm) (*Conferenc
 			return nil, err
 		}
 
-		conference := FromConferenceDoc(doc)
+		conference := fromConferenceDoc(doc)
 		conferences.Items = append(conferences.Items, conference)
 	}
 
@@ -135,7 +134,7 @@ func indexConferenceNow(c context.Context, conference *Conference) error {
 	if err != nil {
 		return err
 	}
-	doc := FromConference(conference)
+	doc := fromConference(conference)
 	_, err = index.Put(c, conference.WebsafeKey, doc)
 	return err
 }

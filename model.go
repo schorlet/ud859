@@ -18,7 +18,7 @@ const (
 	NE  = "!="
 )
 
-// Query fields.
+// Conference query fields.
 const (
 	Name           = "NAME"
 	City           = "CITY"
@@ -46,8 +46,8 @@ func errNotFound(cause error, message string) error {
 	return endpoints.NewNotFoundError("ud859: %s (%v)", message, cause)
 }
 
-// MarshalJSON returns *f as the JSON encoding of f.
-func (f *Filter) MarshalJSON() (b []byte, err error) {
+// MarshalJSON marshals the Filter as JSON data.
+func (f *Filter) MarshalJSON() ([]byte, error) {
 	m := make(map[string]interface{})
 	m["field"] = f.Field
 	m["operator"] = f.Op
@@ -55,7 +55,7 @@ func (f *Filter) MarshalJSON() (b []byte, err error) {
 	return json.Marshal(m)
 }
 
-// UnmarshalJSON sets *f to a copy of data.
+// UnmarshalJSON unmarshals the JSON data into the Filter.
 func (f *Filter) UnmarshalJSON(data []byte) error {
 	m := make(map[string]interface{})
 	err := json.Unmarshal(data, &m)

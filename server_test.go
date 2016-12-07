@@ -193,9 +193,6 @@ func verifyProfile(c *client, t *testing.T, form *ud859.ProfileForm) {
 	}
 
 	// verify the profile
-	if profile.Email != "" {
-		t.Errorf("want:empty, got:%s", profile.Email)
-	}
 	if profile.DisplayName != form.DisplayName {
 		t.Errorf("want:%s, got:%s", form.DisplayName, profile.DisplayName)
 	}
@@ -756,7 +753,7 @@ func verifyConferencesToAttend(c *client, t *testing.T, count int) {
 		t.Errorf("want:%d, got:%d", count, len(conferences.Items))
 	}
 
-	// get profile
+	// get the profile
 	w, err = c.doID("/ConferenceAPI.GetProfile", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -776,17 +773,9 @@ func verifyConferencesToAttend(c *client, t *testing.T, count int) {
 	if len(profile.Conferences) != count {
 		t.Errorf("want:%d, got:%d", count, len(profile.Conferences))
 	}
-
-	for _, key := range profile.Conferences {
-		found := false
-		for _, conference := range conferences.Items {
-			if key == conference.WebsafeKey {
-				found = true
-				break
-			}
-		}
-		if !found {
-			t.Errorf("key not found:%s", key)
+	for _, conference := range conferences.Items {
+		if !profile.IsRegistered(conference.WebsafeKey) {
+			t.Errorf("should be registered to:%s", conference.WebsafeKey)
 		}
 	}
 }

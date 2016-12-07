@@ -6,7 +6,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-// ConferenceQueryForm collects filters for searching for Conferences.
+// ConferenceQueryForm wraps a list of filters.
 type ConferenceQueryForm struct {
 	Filters []*Filter `json:"filters"`
 }
@@ -18,20 +18,20 @@ type Filter struct {
 	Value interface{} `endpoints:"req"`
 }
 
-// Filter adds a filter to the query.
+// Filter adds a restriction to the ConferenceQueryForm.
 func (q *ConferenceQueryForm) Filter(field string, op string, value interface{}) *ConferenceQueryForm {
 	q.Filters = append(q.Filters, &Filter{field, op, value})
 	return q
 }
 
-// QueryConferences searches for Conferences with the specified filters.
+// QueryConferences searches for Conferences with the specified ConferenceQueryForm.
 func (ConferenceAPI) QueryConferences(c context.Context, form *ConferenceQueryForm) (*Conferences, error) {
 	// perform search on index
 	if len(form.Filters) > 0 {
-		return SearchConferences(c, form)
+		return searchConferences(c, form)
 	}
 
-	// get conferences from cache
+	// get the conferences from cache
 	conferences := getCacheNoFilters(c)
 	if conferences != nil {
 		return conferences, nil
@@ -48,7 +48,7 @@ func (ConferenceAPI) QueryConferences(c context.Context, form *ConferenceQueryFo
 	}
 	conferences = &Conferences{Items: items}
 
-	// cache conferences
+	// cache the conferences
 	_ = setCacheNoFilters.Call(c, conferences)
 
 	return conferences, nil
@@ -77,7 +77,7 @@ func (ConferenceAPI) ConferencesCreated(c context.Context) (*Conferences, error)
 	return &Conferences{Items: items}, nil
 }
 
-// ConferencesToAttend returns the Conferences to addend by the current user.
+// ConferencesToAttend returns the Conferences to attend by the current user.
 func (ConferenceAPI) ConferencesToAttend(c context.Context) (*Conferences, error) {
 	pid, err := profileID(c)
 	if err != nil {
@@ -111,8 +111,9 @@ func (ConferenceAPI) ConferencesToAttend(c context.Context) (*Conferences, error
 		return nil, err
 	}
 
+	// datastore.GetMulti returns the entities in the same order as the keys
 	for i := 0; i < len(items); i++ {
-		items[i].WebsafeKey = keys[i].Encode()
+		items[i].WebsafeKey = profile.Conferences[i]
 	}
 
 	// TODO: sort by StartDate

@@ -11,7 +11,7 @@ var (
 	audiences = []string{clientID}
 )
 
-// ConferenceAPI is the conference API.
+// ConferenceAPI defines the conferences management API.
 type ConferenceAPI struct{}
 
 func init() {
@@ -22,7 +22,7 @@ func init() {
 	server.HandleHTTP(nil)
 }
 
-// RegisterConferenceAPI registers the ConferenceAPI with the server.
+// RegisterConferenceAPI adds the ConferenceAPI to the server.
 func RegisterConferenceAPI(server *endpoints.Server) error {
 	api, err := server.RegisterService(
 		new(ConferenceAPI), "conference", "v1", "Conference Central", true)
@@ -41,14 +41,14 @@ func RegisterConferenceAPI(server *endpoints.Server) error {
 	}
 
 	// profile
-	register("GetProfile", "getProfile", "GET", "profile")
+	login("GetProfile", "getProfile", "GET", "profile")
 	login("SaveProfile", "saveProfile", "POST", "profile")
 
 	// conference
 	register("GetConference", "getConference", "GET", "conference/{websafeConferenceKey}")
 	login("CreateConference", "createConference", "POST", "conference")
 
-	// query conference
+	// query conferences
 	login("ConferencesCreated", "getConferencesCreated", "POST", "getConferencesCreated")
 	login("ConferencesToAttend", "getConferencesToAttend", "GET", "getConferencesToAttend")
 	register("QueryConferences", "queryConferences", "POST", "queryConferences")

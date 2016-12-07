@@ -7,30 +7,30 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-func (p *Profile) register(safeKey string) {
-	p.Conferences = append(p.Conferences, safeKey)
+func (p *Profile) register(websafeKey string) {
+	p.Conferences = append(p.Conferences, websafeKey)
 }
 
-func (p *Profile) unRegister(safeKey string) {
+func (p *Profile) unregister(websafeKey string) {
 	for i, key := range p.Conferences {
-		if key == safeKey {
+		if key == websafeKey {
 			p.Conferences = append(p.Conferences[:i], p.Conferences[i+1:]...)
 			break
 		}
 	}
 }
 
-// HasRegistered returns true if the user has registered to the specified conference key.
-func (p Profile) HasRegistered(safeKey string) bool {
+// IsRegistered returns true if the user is registered to the specified conference websafeKey.
+func (p Profile) IsRegistered(websafeKey string) bool {
 	for _, key := range p.Conferences {
-		if key == safeKey {
+		if key == websafeKey {
 			return true
 		}
 	}
 	return false
 }
 
-// GotoConference performs the registration to the specified conference.
+// GotoConference performs the registration to the specified ConferenceKeyForm.
 func (ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyForm) error {
 	pid, err := profileID(c)
 	if err != nil {
@@ -74,7 +74,7 @@ func (ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyForm) 
 			return multi
 		}
 
-		if profile.HasRegistered(conference.WebsafeKey) {
+		if profile.IsRegistered(conference.WebsafeKey) {
 			return ErrRegistered
 		}
 		if conference.SeatsAvailable <= 0 {
@@ -96,7 +96,7 @@ func (ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyForm) 
 	}, &datastore.TransactionOptions{XG: true})
 }
 
-// CancelConference cancels the registration to the specified conference.
+// CancelConference cancels the registration to the specified ConferenceKeyForm.
 func (ConferenceAPI) CancelConference(c context.Context, form *ConferenceKeyForm) error {
 	pid, err := profileID(c)
 	if err != nil {
@@ -140,12 +140,12 @@ func (ConferenceAPI) CancelConference(c context.Context, form *ConferenceKeyForm
 			return multi
 		}
 
-		if !profile.HasRegistered(conference.WebsafeKey) {
+		if !profile.IsRegistered(conference.WebsafeKey) {
 			return ErrNotRegistered
 		}
 
 		// unregister from the conference
-		profile.unRegister(conference.WebsafeKey)
+		profile.unregister(conference.WebsafeKey)
 		_, err = datastore.Put(c, pid.key, profile)
 		if err != nil {
 			return err
