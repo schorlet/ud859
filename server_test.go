@@ -193,6 +193,9 @@ func verifyProfile(c *client, t *testing.T, form *ud859.ProfileForm) {
 	}
 
 	// verify the profile
+	if profile.Email != "" {
+		t.Errorf("want:empty, got:%s", profile.Email)
+	}
 	if profile.DisplayName != form.DisplayName {
 		t.Errorf("want:%s, got:%s", form.DisplayName, profile.DisplayName)
 	}

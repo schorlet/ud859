@@ -56,14 +56,14 @@ func (ConferenceAPI) QueryConferences(c context.Context, form *ConferenceQueryFo
 
 // ConferencesCreated returns the Conferences created by the current user.
 func (ConferenceAPI) ConferencesCreated(c context.Context) (*Conferences, error) {
-	pkey, err := profileKey(c)
+	pid, err := profileID(c)
 	if err != nil {
 		return nil, err
 	}
 
 	// get the conferences whose parent is the profile key
 	items := make([]*Conference, 0)
-	query := datastore.NewQuery("Conference").Ancestor(pkey).Order(StartDate)
+	query := datastore.NewQuery("Conference").Ancestor(pid.key).Order(StartDate)
 
 	keys, err := query.GetAll(c, &items)
 	if err != nil {

@@ -10,7 +10,7 @@ import (
 
 // Profile defines an identified user.
 type Profile struct {
-	email        string
+	Email        string `json:"-"`
 	DisplayName  string `json:"displayName"`
 	TeeShirtSize string `json:"teeShirtSize"`
 	// Conferences is a list of conferences WebsafeKey.
@@ -26,15 +26,6 @@ type ProfileForm struct {
 type identity struct {
 	key   *datastore.Key
 	email string
-}
-
-// profileKey returns a datastore key for the identified user or ErrUnauthorized if the identification failed.
-func profileKey(c context.Context) (*datastore.Key, error) {
-	u, err := endpoints.CurrentUser(c, scopes, audiences, clientIds)
-	if err != nil {
-		return nil, ErrUnauthorized
-	}
-	return datastore.NewKey(c, "Profile", u.String(), 0, nil), nil
 }
 
 func profileID(c context.Context) (*identity, error) {
@@ -65,7 +56,7 @@ func getProfile(c context.Context, pid *identity) (*Profile, error) {
 		return nil, err
 	}
 
-	profile.email = pid.email
+	profile.Email = pid.email
 	return profile, nil
 }
 

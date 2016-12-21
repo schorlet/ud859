@@ -118,7 +118,7 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 		}
 
 		// create confirmation task
-		return sendConfirmation(c, profile.email, body)
+		return sendConfirmation(c, profile.Email, body)
 	}, nil)
 
 	if err != nil {
