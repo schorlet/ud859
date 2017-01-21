@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -92,8 +93,8 @@ func (testAuthenticator) CurrentOAuthClientID(c context.Context, scope string) (
 
 func (testAuthenticator) CurrentOAuthUser(c context.Context, scope string) (*user.User, error) {
 	r := endpoints.HTTPRequest(c)
-	pieces := strings.Fields(r.Header.Get("Authorization"))
-	return &user.User{Email: pieces[1]}, nil
+	fields := strings.Fields(r.Header.Get("Authorization"))
+	return &user.User{Email: fields[1]}, nil
 }
 
 // test
@@ -780,5 +781,33 @@ func verifyConferencesToAttend(c *client, t *testing.T, count int) {
 		if !profile.IsRegistered(conference.WebsafeKey) {
 			t.Errorf("should be registered to:%s", conference.WebsafeKey)
 		}
+		verifyIndexedConference(c, t, conference)
+	}
+}
+
+func verifyIndexedConference(c *client, t *testing.T, conference *ud859.Conference) {
+	// build the query
+	query := new(ud859.ConferenceQueryForm).
+		Filter("KEY", ud859.EQ, conference.WebsafeKey)
+
+	w, err := c.do("/ConferenceAPI.QueryConferences", query)
+	if w.Code != http.StatusOK {
+		t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+	}
+
+	// decode the conferences
+	conferences := new(ud859.Conferences)
+	err = json.NewDecoder(w.Body).Decode(conferences)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(conferences.Items) != 1 {
+		t.Fatalf("want:%d, got:%d", 1, len(conferences.Items))
+	}
+
+	if !reflect.DeepEqual(conferences.Items[0], conference) {
+		t.Errorf("want:%+v", conference)
+		t.Fatalf("got: %+v", conferences.Items[0])
 	}
 }

@@ -18,6 +18,10 @@ handlers:
   script: _go_app
   login: admin
 
+- url: /clean_index
+  script: _go_app
+  login: admin
+
 - url: /((css|fonts|img|js|partials)/.+)$
   static_files: webapp/\1
   upload: webapp

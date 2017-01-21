@@ -41,7 +41,7 @@ func (ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyForm) 
 		return errBadRequest(err, "invalid conference key")
 	}
 
-	return datastore.RunInTransaction(c, func(c context.Context) error {
+	err = datastore.RunInTransaction(c, func(c context.Context) error {
 		errc := make(chan error, 2)
 		var profile *Profile
 		var conference *Conference
@@ -91,9 +91,22 @@ func (ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyForm) 
 		// decrease the available seats
 		conference.SeatsAvailable--
 		_, err = datastore.Put(c, ckey, conference)
-		return err
+		if err != nil {
+			return err
+		}
+
+		// update indexation
+		return indexConference(c, conference)
 
 	}, &datastore.TransactionOptions{XG: true})
+
+	if err != nil {
+		return err
+	}
+
+	// clear cache
+	_ = deleteCacheNoFilters.Call(c)
+	return nil
 }
 
 // CancelConference cancels the registration to the specified ConferenceKeyForm.
@@ -107,7 +120,7 @@ func (ConferenceAPI) CancelConference(c context.Context, form *ConferenceKeyForm
 		return errBadRequest(err, "invalid conference key")
 	}
 
-	return datastore.RunInTransaction(c, func(c context.Context) error {
+	err = datastore.RunInTransaction(c, func(c context.Context) error {
 		errc := make(chan error, 2)
 		var profile *Profile
 		var conference *Conference
@@ -154,7 +167,20 @@ func (ConferenceAPI) CancelConference(c context.Context, form *ConferenceKeyForm
 		// increase the available seats
 		conference.SeatsAvailable++
 		_, err = datastore.Put(c, ckey, conference)
-		return err
+		if err != nil {
+			return err
+		}
+
+		// update indexation
+		return indexConference(c, conference)
 
 	}, &datastore.TransactionOptions{XG: true})
+
+	if err != nil {
+		return err
+	}
+
+	// clear cache
+	_ = deleteCacheNoFilters.Call(c)
+	return nil
 }

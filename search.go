@@ -17,6 +17,7 @@ type conferenceDoc struct {
 	WebsafeKey     search.Atom `json:"websafeKey" search:"KEY"`
 	Name           string      `json:"name" search:"NAME"`
 	Description    string      `json:"description" search:"DESCRIPTION"`
+	Organizer      string      `json:"organizerDisplayName" search:"ORGANIZER"`
 	Topics         string      `json:"topics" search:"TOPIC"`
 	City           string      `json:"city" search:"CITY"`
 	StartDate      time.Time   `json:"startDate" search:"START_DATE"`
@@ -27,18 +28,19 @@ type conferenceDoc struct {
 }
 
 // fromConference creates a conferenceDoc from a Conference.
-func fromConference(conference *Conference) *conferenceDoc {
+func fromConference(c *Conference) *conferenceDoc {
 	return &conferenceDoc{
-		WebsafeKey:     search.Atom(conference.WebsafeKey),
-		Name:           conference.Name,
-		Description:    conference.Description,
-		Topics:         strings.Join(conference.Topics, " "),
-		City:           conference.City,
-		StartDate:      conference.StartDate,
-		EndDate:        conference.EndDate,
-		Month:          float64(conference.StartDate.Month()),
-		MaxAttendees:   float64(conference.MaxAttendees),
-		SeatsAvailable: float64(conference.SeatsAvailable),
+		WebsafeKey:     search.Atom(c.WebsafeKey),
+		Name:           c.Name,
+		Description:    c.Description,
+		Organizer:      c.Organizer,
+		Topics:         strings.Join(c.Topics, " "),
+		City:           c.City,
+		StartDate:      c.StartDate,
+		EndDate:        c.EndDate,
+		Month:          float64(c.StartDate.Month()),
+		MaxAttendees:   float64(c.MaxAttendees),
+		SeatsAvailable: float64(c.SeatsAvailable),
 	}
 }
 
@@ -48,10 +50,11 @@ func fromConferenceDoc(doc *conferenceDoc) *Conference {
 		WebsafeKey:     string(doc.WebsafeKey),
 		Name:           doc.Name,
 		Description:    doc.Description,
+		Organizer:      doc.Organizer,
 		Topics:         strings.Split(doc.Topics, " "),
 		City:           doc.City,
-		StartDate:      doc.StartDate,
-		EndDate:        doc.EndDate,
+		StartDate:      doc.StartDate.UTC(),
+		EndDate:        doc.EndDate.UTC(),
 		Month:          int(doc.StartDate.Month()),
 		MaxAttendees:   int(doc.MaxAttendees),
 		SeatsAvailable: int(doc.SeatsAvailable),
@@ -68,6 +71,11 @@ func (q ConferenceQueryForm) query() string {
 		if op == NE {
 			field = "NOT " + field
 			op = EQ
+		}
+
+		if field == "KEY" {
+			str += fmt.Sprintf("%s = %q ", field, filter.Value)
+			continue
 		}
 
 		switch v := filter.Value.(type) {
