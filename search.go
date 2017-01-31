@@ -2,6 +2,7 @@ package ud859
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -120,6 +121,7 @@ func searchConferences(c context.Context, form *ConferenceQueryForm) (*Conferenc
 		conferences.Items = append(conferences.Items, conference)
 	}
 
+	sort.Sort(conferences)
 	return conferences, nil
 }
 

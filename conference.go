@@ -31,6 +31,17 @@ type Conferences struct {
 	Items []*Conference `json:"items"`
 }
 
+func (c Conferences) Len() int {
+	return len(c.Items)
+}
+func (c Conferences) Swap(i, j int) {
+	c.Items[i], c.Items[j] = c.Items[j], c.Items[i]
+}
+func (c Conferences) Less(i, j int) bool {
+	c1, c2 := c.Items[i], c.Items[j]
+	return c1.StartDate.Before(c2.StartDate)
+}
+
 // ConferenceForm gives details about a conference to create.
 type ConferenceForm struct {
 	Name         string   `json:"name" endpoints:"req"`
