@@ -132,7 +132,7 @@ func getProfile(c *client, t *testing.T) {
 		t.Fatal(err)
 	}
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("want:%d, got:%d", http.StatusUnauthorized, w.Code)
+		t.Fatalf("got:%d, want:%d", w.Code, http.StatusUnauthorized)
 	}
 
 	verifyProfile(c, t, new(ud859.ProfileForm))
@@ -150,7 +150,7 @@ func saveProfile(c *client, t *testing.T) {
 		t.Fatal(err)
 	}
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("want:%d, got:%d", http.StatusUnauthorized, w.Code)
+		t.Fatalf("got:%d, want:%d", w.Code, http.StatusUnauthorized)
 	}
 
 	// save profile
@@ -159,7 +159,7 @@ func saveProfile(c *client, t *testing.T) {
 		t.Fatal(err)
 	}
 	if w.Code != http.StatusOK {
-		t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+		t.Fatalf("got:%d, want:%d", w.Code, http.StatusOK)
 	}
 	verifyProfile(c, t, form)
 
@@ -170,7 +170,7 @@ func saveProfile(c *client, t *testing.T) {
 		t.Fatal(err)
 	}
 	if w.Code != http.StatusOK {
-		t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+		t.Fatalf("got:%d, want:%d", w.Code, http.StatusOK)
 	}
 	verifyProfile(c, t, form)
 
@@ -183,7 +183,7 @@ func verifyProfile(c *client, t *testing.T, form *ud859.ProfileForm) {
 		t.Fatal(err)
 	}
 	if w.Code != http.StatusOK {
-		t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+		t.Fatalf("got:%d, want:%d", w.Code, http.StatusOK)
 	}
 
 	// decode the profile
@@ -195,13 +195,13 @@ func verifyProfile(c *client, t *testing.T, form *ud859.ProfileForm) {
 
 	// verify the profile
 	if profile.Email != "" {
-		t.Errorf("want:empty, got:%s", profile.Email)
+		t.Errorf("got:%s, want:empty", profile.Email)
 	}
 	if profile.DisplayName != form.DisplayName {
-		t.Errorf("want:%s, got:%s", form.DisplayName, profile.DisplayName)
+		t.Errorf("got:%s, want:%s", profile.DisplayName, form.DisplayName)
 	}
 	if profile.TeeShirtSize != form.TeeShirtSize {
-		t.Errorf("want:%s, got:%s", form.TeeShirtSize, profile.TeeShirtSize)
+		t.Errorf("got:%s, want:%s", profile.TeeShirtSize, form.TeeShirtSize)
 	}
 }
 
@@ -214,7 +214,7 @@ func getConference(c *client, t *testing.T) {
 		t.Fatal(err)
 	}
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("want:%d, got:%d", http.StatusBadRequest, w.Code)
+		t.Fatalf("got:%d, want:%d", w.Code, http.StatusBadRequest)
 	}
 
 	// get conference with bad key
@@ -223,7 +223,7 @@ func getConference(c *client, t *testing.T) {
 		t.Fatal(err)
 	}
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("want:%d, got:%d", http.StatusBadRequest, w.Code)
+		t.Fatalf("got:%d, want:%d", w.Code, http.StatusBadRequest)
 	}
 }
 
@@ -257,7 +257,7 @@ func createConference(c *client, t *testing.T) {
 			t.Fatal(err)
 		}
 		if w.Code != http.StatusUnauthorized {
-			t.Fatalf("want:%d, got:%d", http.StatusUnauthorized, w.Code)
+			t.Fatalf("got:%d, want:%d", w.Code, http.StatusUnauthorized)
 		}
 
 		// save conference
@@ -266,7 +266,7 @@ func createConference(c *client, t *testing.T) {
 			t.Fatal(err)
 		}
 		if w.Code != http.StatusOK {
-			t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+			t.Fatalf("got:%d, want:%d", w.Code, http.StatusOK)
 		}
 
 		// decode the conference created
@@ -276,7 +276,7 @@ func createConference(c *client, t *testing.T) {
 			t.Fatal(err)
 		}
 		if created.Name != form.Name {
-			t.Errorf("want:%s, got:%s", form.Name, created.Name)
+			t.Errorf("got:%s, want:%s", created.Name, form.Name)
 		}
 
 		key := &ud859.ConferenceKeyForm{WebsafeKey: created.WebsafeKey}
@@ -289,7 +289,7 @@ func createConference(c *client, t *testing.T) {
 		t.Fatal(err)
 	}
 	if w.Code != http.StatusOK {
-		t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+		t.Fatalf("got:%d, want:%d", w.Code, http.StatusOK)
 	}
 
 	// decode the conferences
@@ -299,7 +299,7 @@ func createConference(c *client, t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(conferences.Items) != 2 {
-		t.Errorf("want:2, got:%d", len(conferences.Items))
+		t.Errorf("got:%d, want:2", len(conferences.Items))
 	}
 
 	for i, conference := range conferences.Items {
@@ -317,7 +317,7 @@ func verifyConference(c *client, t *testing.T,
 		t.Fatal(err)
 	}
 	if w.Code != http.StatusOK {
-		t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+		t.Fatalf("got:%d, want:%d", w.Code, http.StatusOK)
 	}
 
 	// decode the conference
@@ -332,32 +332,32 @@ func verifyConference(c *client, t *testing.T,
 		t.Error("conference.WebsafeKey is empty")
 	}
 	if conference.Name != form.Name {
-		t.Errorf("want:%s, got:%s", form.Name, conference.Name)
+		t.Errorf("got:%s, want:%s", conference.Name, form.Name)
 	}
 	if conference.Organizer != "bob" {
-		t.Errorf("want:%s, got:%s", "bob", conference.Organizer)
+		t.Errorf("got:%s, want:%s", conference.Organizer, "bob")
 	}
 
 	startDate := conference.StartDate.Format(time.RFC3339)
 	if startDate != form.StartDate {
-		t.Errorf("want:%s, got:%s", form.StartDate, startDate)
+		t.Errorf("got:%s, want:%s", startDate, form.StartDate)
 	}
 	endDate := conference.EndDate.Format(time.RFC3339)
 	if endDate != form.EndDate {
-		t.Errorf("want:%s, got:%s", form.EndDate, endDate)
+		t.Errorf("got:%s, want:%s", endDate, form.EndDate)
 	}
 
 	tf := strings.Join(form.Topics, ",")
 	tc := strings.Join(conference.Topics, ",")
 	if tc != tf {
-		t.Errorf("want:%s, got:%s", tf, tc)
+		t.Errorf("got:%s, want:%s", tc, tf)
 	}
 
 	if strconv.Itoa(conference.SeatsAvailable) != form.MaxAttendees {
-		t.Errorf("want:%s, got:%d", form.MaxAttendees, conference.SeatsAvailable)
+		t.Errorf("got:%d, want:%s", conference.SeatsAvailable, form.MaxAttendees)
 	}
 	if conference.SeatsAvailable != conference.MaxAttendees {
-		t.Errorf("want:%d, got:%d", conference.MaxAttendees, conference.SeatsAvailable)
+		t.Errorf("got:%d, want:%d", conference.SeatsAvailable, conference.MaxAttendees)
 	}
 }
 
@@ -371,7 +371,7 @@ func queryConferences(c *client, t *testing.T) {
 func queryNofilters(c *client, t *testing.T) {
 	w, err := c.do("/ConferenceAPI.QueryConferences", nil)
 	if w.Code != http.StatusOK {
-		t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+		t.Fatalf("got:%d, want:%d", w.Code, http.StatusOK)
 	}
 
 	// decode the conferences
@@ -381,7 +381,7 @@ func queryNofilters(c *client, t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(conferences.Items) != 2 {
-		t.Errorf("want:2, got:%d", len(conferences.Items))
+		t.Errorf("got:%d, want:2", len(conferences.Items))
 	}
 }
 
@@ -474,8 +474,8 @@ func queryFilters(c *client, t *testing.T) {
 			{ud859.StartDate, ud859.GT, "2016-01-01T23:00:00Z"}}, 2},
 	}
 
-	for _, tt_donotuse := range tts {
-		tt := tt_donotuse
+	for _, tt := range tts {
+		tt := tt
 
 		t.Run(tt.restrictions[0].Field, func(t *testing.T) {
 			t.Parallel()
@@ -488,7 +488,7 @@ func queryFilters(c *client, t *testing.T) {
 
 			w, err := c.do("/ConferenceAPI.QueryConferences", query)
 			if w.Code != http.StatusOK {
-				t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+				t.Fatalf("got:%d, want:%d", w.Code, http.StatusOK)
 			}
 
 			// decode the conferences
@@ -498,7 +498,7 @@ func queryFilters(c *client, t *testing.T) {
 				t.Fatal(err)
 			}
 			if len(conferences.Items) != tt.expected {
-				t.Errorf("want:%d, got:%d", tt.expected, len(conferences.Items))
+				t.Errorf("got:%d, want:%d", len(conferences.Items), tt.expected)
 			}
 		})
 	}
@@ -531,7 +531,7 @@ func gotoUnknown(c *client, t *testing.T) {
 			t.Fatal(err)
 		}
 		if w.Code != tt.status {
-			t.Errorf("want:%d, got:%d", tt.status, w.Code)
+			t.Errorf("got:%d, want:%d", w.Code, tt.status)
 		}
 
 		// unregister
@@ -540,7 +540,7 @@ func gotoUnknown(c *client, t *testing.T) {
 			t.Fatal(err)
 		}
 		if w.Code != tt.status {
-			t.Errorf("want:%d, got:%d", tt.status, w.Code)
+			t.Errorf("got:%d, want:%d", w.Code, tt.status)
 		}
 	}
 }
@@ -552,7 +552,7 @@ func gotoUnRegistered(c *client, t *testing.T) {
 		t.Fatal(err)
 	}
 	if w.Code != http.StatusOK {
-		t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+		t.Fatalf("got:%d, want:%d", w.Code, http.StatusOK)
 	}
 
 	// decode the conferences
@@ -588,7 +588,7 @@ func gotoUnRegistered(c *client, t *testing.T) {
 			t.Fatal(err)
 		}
 		if w.Code != tt.status {
-			t.Errorf("want:%d, got:%d", tt.status, w.Code)
+			t.Errorf("got:%d, want:%d", w.Code, tt.status)
 		}
 	}
 }
@@ -600,7 +600,7 @@ func gotoRegistration(c *client, t *testing.T) {
 		t.Fatal(err)
 	}
 	if w.Code != http.StatusOK {
-		t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+		t.Fatalf("got:%d, want:%d", w.Code, http.StatusOK)
 	}
 
 	// decode the conferences
@@ -622,7 +622,7 @@ func gotoRegistration(c *client, t *testing.T) {
 			t.Fatal(err)
 		}
 		if w.Code != http.StatusOK {
-			t.Errorf("want:%d, got:%d", http.StatusOK, w.Code)
+			t.Errorf("got:%d, want:%d", w.Code, http.StatusOK)
 		}
 
 		// register twice
@@ -631,7 +631,7 @@ func gotoRegistration(c *client, t *testing.T) {
 			t.Fatal(err)
 		}
 		if w.Code != http.StatusConflict {
-			t.Errorf("want:%d, got:%d", http.StatusConflict, w.Code)
+			t.Errorf("got:%d, want:%d", w.Code, http.StatusConflict)
 		}
 
 		verifyConferencesToAttend(c, t, i+1)
@@ -646,7 +646,7 @@ func gotoRegistration(c *client, t *testing.T) {
 			t.Fatal(err)
 		}
 		if w.Code != http.StatusOK {
-			t.Errorf("want:%d, got:%d", http.StatusOK, w.Code)
+			t.Errorf("got:%d, want:%d", w.Code, http.StatusOK)
 		}
 
 		// unregister twice
@@ -655,7 +655,7 @@ func gotoRegistration(c *client, t *testing.T) {
 			t.Fatal(err)
 		}
 		if w.Code != http.StatusConflict {
-			t.Errorf("want:%d, got:%d", http.StatusConflict, w.Code)
+			t.Errorf("got:%d, want:%d", w.Code, http.StatusConflict)
 		}
 
 		verifyConferencesToAttend(c, t, len(conferences.Items)-i-1)
@@ -672,7 +672,7 @@ func gotoConflict(c *client, t *testing.T) {
 		t.Fatal(err)
 	}
 	if w.Code != http.StatusOK {
-		t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+		t.Fatalf("got:%d, want:%d", w.Code, http.StatusOK)
 	}
 
 	// decode the conferences
@@ -722,7 +722,7 @@ func gotoConflict(c *client, t *testing.T) {
 			t.Fatal(err)
 		}
 		if w.Code != http.StatusOK {
-			t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+			t.Fatalf("got:%d, want:%d", w.Code, http.StatusOK)
 		}
 
 		// decode the conference
@@ -732,7 +732,7 @@ func gotoConflict(c *client, t *testing.T) {
 			t.Fatal(err)
 		}
 		if conference2.SeatsAvailable != 0 {
-			t.Errorf("want:0, got:%d", conference2.SeatsAvailable)
+			t.Errorf("got:%d, want:0", conference2.SeatsAvailable)
 		}
 	}
 }
@@ -744,7 +744,7 @@ func verifyConferencesToAttend(c *client, t *testing.T, count int) {
 		t.Fatal(err)
 	}
 	if w.Code != http.StatusOK {
-		t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+		t.Fatalf("got:%d, want:%d", w.Code, http.StatusOK)
 	}
 
 	// decode the conferences
@@ -754,7 +754,7 @@ func verifyConferencesToAttend(c *client, t *testing.T, count int) {
 		t.Fatal(err)
 	}
 	if len(conferences.Items) != count {
-		t.Errorf("want:%d, got:%d", count, len(conferences.Items))
+		t.Errorf("got:%d, want:%d", len(conferences.Items), count)
 	}
 
 	// get the profile
@@ -763,7 +763,7 @@ func verifyConferencesToAttend(c *client, t *testing.T, count int) {
 		t.Fatal(err)
 	}
 	if w.Code != http.StatusOK {
-		t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+		t.Fatalf("got:%d, want:%d", w.Code, http.StatusOK)
 	}
 
 	// decode the profile
@@ -775,7 +775,7 @@ func verifyConferencesToAttend(c *client, t *testing.T, count int) {
 
 	// verify the profile
 	if len(profile.Conferences) != count {
-		t.Errorf("want:%d, got:%d", count, len(profile.Conferences))
+		t.Errorf("got:%d, want:%d", len(profile.Conferences), count)
 	}
 	for _, conference := range conferences.Items {
 		if !profile.IsRegistered(conference.WebsafeKey) {
@@ -792,7 +792,7 @@ func verifyIndexedConference(c *client, t *testing.T, conference *ud859.Conferen
 
 	w, err := c.do("/ConferenceAPI.QueryConferences", query)
 	if w.Code != http.StatusOK {
-		t.Fatalf("want:%d, got:%d", http.StatusOK, w.Code)
+		t.Fatalf("got:%d, want:%d", w.Code, http.StatusOK)
 	}
 
 	// decode the conferences
@@ -803,11 +803,11 @@ func verifyIndexedConference(c *client, t *testing.T, conference *ud859.Conferen
 	}
 
 	if len(conferences.Items) != 1 {
-		t.Fatalf("want:%d, got:%d", 1, len(conferences.Items))
+		t.Fatalf("got:%d, want:%d", len(conferences.Items), 1)
 	}
 
 	if !reflect.DeepEqual(conferences.Items[0], conference) {
-		t.Errorf("want:%+v", conference)
-		t.Fatalf("got: %+v", conferences.Items[0])
+		t.Errorf("got: %+v", conferences.Items[0])
+		t.Fatalf("want:%+v", conference)
 	}
 }
