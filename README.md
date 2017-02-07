@@ -18,7 +18,7 @@ The conference API endpoint is also queryable from [apis-explorer.appspot.com](h
 
 Make sure that your endpoint is readable by the [discovery service](https://developers.google.com/discovery/). This URL should return the service endpoint description [http://localhost:8080/_ah/api/discovery/v1/apis/conference/v1/rest](http://localhost:8080/_ah/api/discovery/v1/apis/conference/v1/rest).
 
-+ **What was my Eureka moment ?**
++ **My Eureka moment ?**
 
 When I managed to fake the endpoint authentication in the tests.
 
