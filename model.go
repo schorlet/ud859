@@ -30,13 +30,17 @@ const (
 	SeatsAvailable = "SEATS_AVAILABLE"
 )
 
-// Common errors.
-var (
-	ErrUnauthorized     = endpoints.NewUnauthorizedError("ud859: signin required")
-	ErrRegistered       = endpoints.NewConflictError("ud859: already registered")
-	ErrNotRegistered    = endpoints.NewConflictError("ud859: not registered")
-	ErrNoSeatsAvailable = endpoints.NewConflictError("ud859: no seats available")
-)
+func errConflict(message string) error {
+	return endpoints.NewConflictError("ud859: %s", message)
+}
+
+func errInternalServer(cause error, message string) error {
+	return endpoints.NewInternalServerError("ud859: %s (%v)", message, cause)
+}
+
+func errUnauthorized(cause error, message string) error {
+	return endpoints.NewUnauthorizedError("ud859: %s (%v)", message, cause)
+}
 
 func errBadRequest(cause error, message string) error {
 	return endpoints.NewBadRequestError("ud859: %s (%v)", message, cause)

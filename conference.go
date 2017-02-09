@@ -9,6 +9,7 @@ import (
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/log"
 )
 
 // Conference defines a conference.
@@ -105,12 +106,6 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 	}
 	conference.Organizer = profile.DisplayName
 
-	// body of the confirmation email
-	body, err := conferenceText(conference)
-	if err != nil {
-		return nil, err
-	}
-
 	// incomplete conference key
 	ckey := datastore.NewIncompleteKey(c, "Conference", pid.key)
 
@@ -118,26 +113,39 @@ func (ConferenceAPI) CreateConference(c context.Context, form *ConferenceForm) (
 		// save the conference
 		key, err := datastore.Put(c, ckey, conference)
 		if err != nil {
-			return err
+			return errInternalServer(err, "unable to create conference")
 		}
 		conference.WebsafeKey = key.Encode()
 
 		// create indexation task
 		err = indexConference(c, conference)
 		if err != nil {
-			return err
+			return errInternalServer(err, "unable to index conference")
 		}
-
-		// create confirmation task
-		return sendConfirmation(c, profile.Email, body)
+		return nil
 	}, nil)
 
 	if err != nil {
 		return nil, err
 	}
 
+	// body of the confirmation email
+	body, err := conferenceText(conference)
+	if err != nil {
+		log.Errorf(c, "unable to create conference email: %v", err)
+	} else {
+		// create confirmation task
+		err = sendConfirmation(c, profile.Email, body)
+		if err != nil {
+			log.Errorf(c, "unable to send conference email: %v", err)
+		}
+	}
+
 	// clear cache
-	_ = deleteCacheNoFilters.Call(c)
+	err = deleteCacheNoFilters.Call(c)
+	if err != nil {
+		log.Errorf(c, "unable to clear cache: %v", err)
+	}
 
 	return &ConferenceCreated{
 		Name:       conference.Name,

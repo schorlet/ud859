@@ -335,7 +335,7 @@ func verifyConference(c *client, t *testing.T,
 		t.Errorf("got:%s, want:%s", conference.Name, form.Name)
 	}
 	if conference.Organizer != "bob" {
-		t.Errorf("got:%s, want:%s", conference.Organizer, "bob")
+		t.Errorf("got:%s, want:bob", conference.Organizer)
 	}
 
 	startDate := conference.StartDate.Format(time.RFC3339)
@@ -370,6 +370,9 @@ func queryConferences(c *client, t *testing.T) {
 
 func queryNofilters(c *client, t *testing.T) {
 	w, err := c.do("/ConferenceAPI.QueryConferences", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if w.Code != http.StatusOK {
 		t.Fatalf("got:%d, want:%d", w.Code, http.StatusOK)
 	}
@@ -699,9 +702,11 @@ func gotoConflict(c *client, t *testing.T) {
 				// register user
 				w, err := c.doAs(email, "/ConferenceAPI.GotoConference", key)
 				if err != nil {
-					t.Fatal(err)
+					t.Error(err)
+					codes <- 0
+				} else {
+					codes <- w.Code
 				}
-				codes <- w.Code
 			}(user)
 		}
 		wg.Wait()
@@ -791,6 +796,9 @@ func verifyIndexedConference(c *client, t *testing.T, conference *ud859.Conferen
 		Filter("KEY", ud859.EQ, conference.WebsafeKey)
 
 	w, err := c.do("/ConferenceAPI.QueryConferences", query)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if w.Code != http.StatusOK {
 		t.Fatalf("got:%d, want:%d", w.Code, http.StatusOK)
 	}

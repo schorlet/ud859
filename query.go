@@ -4,6 +4,7 @@ import (
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/log"
 )
 
 // ConferenceQueryForm wraps a list of filters.
@@ -40,7 +41,7 @@ func (ConferenceAPI) QueryConferences(c context.Context, form *ConferenceQueryFo
 	items := make([]*Conference, 0)
 	keys, err := datastore.NewQuery("Conference").Order(StartDate).GetAll(c, &items)
 	if err != nil {
-		return nil, err
+		return nil, errInternalServer(err, "unable to query conference")
 	}
 
 	for i := 0; i < len(items); i++ {
@@ -49,7 +50,10 @@ func (ConferenceAPI) QueryConferences(c context.Context, form *ConferenceQueryFo
 	conferences = &Conferences{Items: items}
 
 	// cache the conferences
-	_ = setCacheNoFilters.Call(c, conferences)
+	err = setCacheNoFilters.Call(c, conferences)
+	if err != nil {
+		log.Errorf(c, "unable to set cache: %v", err)
+	}
 
 	return conferences, nil
 }
@@ -67,7 +71,7 @@ func (ConferenceAPI) ConferencesCreated(c context.Context) (*Conferences, error)
 
 	keys, err := query.GetAll(c, &items)
 	if err != nil {
-		return nil, err
+		return nil, errInternalServer(err, "unable to query conference")
 	}
 
 	for i := 0; i < len(items); i++ {
@@ -100,7 +104,7 @@ func (ConferenceAPI) ConferencesToAttend(c context.Context) (*Conferences, error
 	for i, safeKey := range profile.Conferences {
 		keys[i], err = datastore.DecodeKey(safeKey)
 		if err != nil {
-			return nil, err
+			return nil, errInternalServer(err, "unable to query conference")
 		}
 	}
 
@@ -108,7 +112,7 @@ func (ConferenceAPI) ConferencesToAttend(c context.Context) (*Conferences, error
 	items := make([]*Conference, len(profile.Conferences))
 	err = datastore.GetMulti(c, keys, items)
 	if err != nil {
-		return nil, err
+		return nil, errInternalServer(err, "unable to query conference")
 	}
 
 	// datastore.GetMulti returns the entities in the same order as the keys

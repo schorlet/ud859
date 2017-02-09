@@ -101,7 +101,7 @@ func alphaNumeric(r rune) rune {
 func searchConferences(c context.Context, form *ConferenceQueryForm) (*Conferences, error) {
 	index, err := search.Open("Conference")
 	if err != nil {
-		return nil, err
+		return nil, errInternalServer(err, "unable to open search index")
 	}
 
 	it := index.Search(c, form.query(), nil)
@@ -114,7 +114,7 @@ func searchConferences(c context.Context, form *ConferenceQueryForm) (*Conferenc
 		if err == search.Done {
 			break
 		} else if err != nil {
-			return nil, err
+			return nil, errInternalServer(err, "unable to search index")
 		}
 
 		conference := fromConferenceDoc(doc)
@@ -142,9 +142,11 @@ var indexConferenceDelay = delay.Func("index_conference", indexConferenceNow)
 func indexConferenceNow(c context.Context, conference *Conference) error {
 	index, err := search.Open("Conference")
 	if err != nil {
-		return err
+		return errInternalServer(err, "unable to open search index")
 	}
-	doc := fromConference(conference)
-	_, err = index.Put(c, conference.WebsafeKey, doc)
-	return err
+	_, err = index.Put(c, conference.WebsafeKey, fromConference(conference))
+	if err != nil {
+		return errInternalServer(err, "unable to index conference")
+	}
+	return nil
 }

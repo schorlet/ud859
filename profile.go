@@ -31,7 +31,7 @@ type identity struct {
 func profileID(c context.Context) (*identity, error) {
 	u, err := endpoints.CurrentUser(c, scopes, audiences, clientIds)
 	if err != nil {
-		return nil, ErrUnauthorized
+		return nil, errUnauthorized(err, "signin required")
 	}
 	return &identity{
 		key:   datastore.NewKey(c, "Profile", u.String(), 0, nil),
@@ -53,7 +53,7 @@ func getProfile(c context.Context, pid *identity) (*Profile, error) {
 	profile := new(Profile)
 	err := datastore.Get(c, pid.key, profile)
 	if err != nil && err != datastore.ErrNoSuchEntity {
-		return nil, err
+		return nil, errInternalServer(err, "unable to get profile")
 	}
 
 	profile.Email = pid.email
@@ -79,6 +79,9 @@ func (ConferenceAPI) SaveProfile(c context.Context, form *ProfileForm) error {
 		profile.TeeShirtSize = form.TeeShirtSize
 
 		_, err = datastore.Put(c, pid.key, profile)
-		return err
+		if err != nil {
+			return errInternalServer(err, "unable to save profile")
+		}
+		return nil
 	}, nil)
 }

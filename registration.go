@@ -5,6 +5,7 @@ import (
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/log"
 )
 
 func (p *Profile) register(websafeKey string) {
@@ -75,28 +76,32 @@ func (ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyForm) 
 		}
 
 		if profile.IsRegistered(conference.WebsafeKey) {
-			return ErrRegistered
+			return errConflict("already registered")
 		}
 		if conference.SeatsAvailable <= 0 {
-			return ErrNoSeatsAvailable
+			return errConflict("no seats available")
 		}
 
 		// register to the conference
 		profile.register(conference.WebsafeKey)
 		_, err = datastore.Put(c, pid.key, profile)
 		if err != nil {
-			return err
+			return errInternalServer(err, "unable to save profile")
 		}
 
 		// decrease the available seats
 		conference.SeatsAvailable--
 		_, err = datastore.Put(c, ckey, conference)
 		if err != nil {
-			return err
+			return errInternalServer(err, "unable to save conference")
 		}
 
 		// update indexation
-		return indexConference(c, conference)
+		err = indexConference(c, conference)
+		if err != nil {
+			return errInternalServer(err, "unable to index conference")
+		}
+		return nil
 
 	}, &datastore.TransactionOptions{XG: true})
 
@@ -105,7 +110,10 @@ func (ConferenceAPI) GotoConference(c context.Context, form *ConferenceKeyForm) 
 	}
 
 	// clear cache
-	_ = deleteCacheNoFilters.Call(c)
+	err = deleteCacheNoFilters.Call(c)
+	if err != nil {
+		log.Errorf(c, "unable to clear cache: %v", err)
+	}
 	return nil
 }
 
@@ -154,25 +162,29 @@ func (ConferenceAPI) CancelConference(c context.Context, form *ConferenceKeyForm
 		}
 
 		if !profile.IsRegistered(conference.WebsafeKey) {
-			return ErrNotRegistered
+			return errConflict("not registered")
 		}
 
 		// unregister from the conference
 		profile.unregister(conference.WebsafeKey)
 		_, err = datastore.Put(c, pid.key, profile)
 		if err != nil {
-			return err
+			return errInternalServer(err, "unable to save profile")
 		}
 
 		// increase the available seats
 		conference.SeatsAvailable++
 		_, err = datastore.Put(c, ckey, conference)
 		if err != nil {
-			return err
+			return errInternalServer(err, "unable to save conference")
 		}
 
 		// update indexation
-		return indexConference(c, conference)
+		err = indexConference(c, conference)
+		if err != nil {
+			return errInternalServer(err, "unable to index conference")
+		}
+		return nil
 
 	}, &datastore.TransactionOptions{XG: true})
 
@@ -181,6 +193,9 @@ func (ConferenceAPI) CancelConference(c context.Context, form *ConferenceKeyForm
 	}
 
 	// clear cache
-	_ = deleteCacheNoFilters.Call(c)
+	err = deleteCacheNoFilters.Call(c)
+	if err != nil {
+		log.Errorf(c, "unable to clear cache: %v", err)
+	}
 	return nil
 }
