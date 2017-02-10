@@ -2,6 +2,7 @@ package ud859
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -61,17 +62,52 @@ func (f *Filter) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON unmarshals the JSON data into the Filter.
 func (f *Filter) UnmarshalJSON(data []byte) error {
+	errParse := func(err error) error {
+		message := fmt.Sprintf("unable to parse filter: %s", data)
+		return errBadRequest(err, message)
+	}
+
 	m := make(map[string]interface{})
 	err := json.Unmarshal(data, &m)
 	if err != nil {
-		return errBadRequest(err, "unable to parse filter")
+		return errParse(err)
 	}
 
-	f.Field = m["field"].(string)
-	f.Value = m["value"]
+	var ok bool
+	f.Field, ok = m["field"].(string)
+	if !ok {
+		return errParse(err)
+	}
 
-	f.Op = m["operator"].(string)
+	f.Op, ok = m["operator"].(string)
+	if !ok {
+		return errParse(err)
+	}
+	if err = f.setOp(); err != nil {
+		return errParse(err)
+	}
+
+	f.Value = m["value"]
+	if f.Field == Month || f.Field == MaxAttendees || f.Field == SeatsAvailable {
+		err = f.setValueInt()
+
+	} else if f.Field == StartDate || f.Field == EndDate {
+		err = f.setValueTime()
+	}
+	if err != nil {
+		return errParse(err)
+	}
+	return nil
+}
+
+func (f *Filter) setOp() (err error) {
 	switch f.Op {
+	case EQ:
+	case LT:
+	case GT:
+	case LTE:
+	case GTE:
+	case NE:
 	case "EQ":
 		f.Op = EQ
 	case "LT":
@@ -84,33 +120,37 @@ func (f *Filter) UnmarshalJSON(data []byte) error {
 		f.Op = GTE
 	case "NE":
 		f.Op = NE
-	}
-
-	if f.Field == Month || f.Field == MaxAttendees ||
-		f.Field == SeatsAvailable {
-		switch v := f.Value.(type) {
-		case string:
-			f.Value, err = strconv.Atoi(v)
-			if err != nil {
-				return errBadRequest(err, "unable to parse "+f.Field)
-			}
-		case float64:
-			f.Value = int(v)
-		default:
-			return errBadRequest(err, "unable to parse "+f.Field)
-		}
-
-	} else if f.Field == StartDate || f.Field == EndDate {
-		switch v := f.Value.(type) {
-		case time.Time:
-		case string:
-			f.Value, err = time.Parse(time.RFC3339, v)
-			if err != nil {
-				return errBadRequest(err, "unable to parse "+f.Field)
-			}
-		default:
-			return errBadRequest(err, "unable to parse "+f.Field)
-		}
+	default:
+		return fmt.Errorf("invalid operator")
 	}
 	return nil
+}
+
+func (f *Filter) setValueInt() (err error) {
+	switch v := f.Value.(type) {
+	case string:
+		f.Value, err = strconv.Atoi(v)
+		if err != nil {
+			err = fmt.Errorf("invalid value: %v", err)
+		}
+	case float64:
+		f.Value = int(v)
+	default:
+		err = fmt.Errorf("invalid type of value")
+	}
+	return
+}
+
+func (f *Filter) setValueTime() (err error) {
+	switch v := f.Value.(type) {
+	case time.Time:
+	case string:
+		f.Value, err = time.Parse(time.RFC3339, v)
+		if err != nil {
+			err = fmt.Errorf("invalid value: %v", err)
+		}
+	default:
+		err = fmt.Errorf("invalid type of value")
+	}
+	return
 }

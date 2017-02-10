@@ -365,6 +365,7 @@ func verifyConference(c *client, t *testing.T,
 
 func queryConferences(c *client, t *testing.T) {
 	t.Run("Nofilters", withClient(c, queryNofilters))
+	t.Run("Invalid", withClient(c, queryInvalid))
 	t.Run("Filters", withClient(c, queryFilters))
 }
 
@@ -385,6 +386,29 @@ func queryNofilters(c *client, t *testing.T) {
 	}
 	if len(conferences.Items) != 2 {
 		t.Errorf("got:%d, want:2", len(conferences.Items))
+	}
+}
+
+func queryInvalid(c *client, t *testing.T) {
+	type r ud859.Filter
+
+	tts := []r{
+		{ud859.Month, ud859.EQ, "dotGo"},
+		{ud859.Month, "OK", 10},
+		{ud859.StartDate, ud859.EQ, "dotGo"},
+	}
+
+	for _, tt := range tts {
+		query := new(ud859.ConferenceQueryForm).
+			Filter(tt.Field, tt.Op, tt.Value)
+
+		w, err := c.do("/ConferenceAPI.QueryConferences", query)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("got:%d, want:%d", w.Code, http.StatusBadRequest)
+		}
 	}
 }
 
@@ -490,6 +514,9 @@ func queryFilters(c *client, t *testing.T) {
 			}
 
 			w, err := c.do("/ConferenceAPI.QueryConferences", query)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if w.Code != http.StatusOK {
 				t.Fatalf("got:%d, want:%d", w.Code, http.StatusOK)
 			}
